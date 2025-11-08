@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 // FIX: Aliased Record to AppRecord to avoid conflict with the built-in Record type.
 import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings } from '../types';
 import RecordModal from './AddRecordModal';
@@ -21,6 +20,8 @@ interface RecordsTableProps {
     showToast: (message: string, type?: 'success' | 'error') => void;
     activeMode: AppMode;
     selectedMonth: string; // Add selectedMonth prop
+    onImportRecords: (file: File) => void;
+    onExportRecords: () => void;
 }
 
 const SearchIcon = () => (
@@ -56,6 +57,18 @@ const ReportIcon = () => (
 const JournalIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.206 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.794 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.794 5 16.5 5c1.706 0 3.332.477 4.5 1.253v13C19.832 18.477 18.206 18 16.5 18c-1.706 0-3.332.477-4.5 1.253" />
+    </svg>
+);
+
+const UploadIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+    </svg>
+);
+
+const DownloadIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>
 );
 
@@ -106,12 +119,27 @@ const conclusionTypeDisplay: Record<string, string> = {
     'contractual': 'Договірний'
 };
 
-const RecordsTable: React.FC<RecordsTableProps> = ({ records, onAddRecord, onUpdateRecord, onDeleteRecord, firms, experts, costModelTable, generalSettings, showToast, activeMode, selectedMonth }) => {
+const RecordsTable: React.FC<RecordsTableProps> = ({ 
+    records, 
+    onAddRecord, 
+    onUpdateRecord, 
+    onDeleteRecord, 
+    firms, 
+    experts, 
+    costModelTable, 
+    generalSettings, 
+    showToast, 
+    activeMode, 
+    selectedMonth,
+    onImportRecords,
+    onExportRecords 
+}) => {
     const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
     const [recordToEdit, setRecordToEdit] = useState<AppRecord | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     
     const handleOpenAddModal = () => {
@@ -214,6 +242,21 @@ const RecordsTable: React.FC<RecordsTableProps> = ({ records, onAddRecord, onUpd
             newWindow.document.close();
         } else {
             showToast('Не вдалося відкрити нове вікно. Будь ласка, дозвольте спливаючі вікна для цього сайту.', 'error');
+        }
+    };
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            onImportRecords(file);
+        }
+        // Reset file input value so same file can be selected again
+        if (e.target) {
+            e.target.value = '';
         }
     };
 
@@ -353,42 +396,64 @@ const RecordsTable: React.FC<RecordsTableProps> = ({ records, onAddRecord, onUpd
     return (
         <>
         <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:text-gray-100">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <div className="relative w-full md:w-auto">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+                <div className="relative w-full lg:w-auto">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <SearchIcon />
                     </div>
                     <input 
                         type="text" 
                         placeholder="Пошук записів..." 
-                        className="w-full md:w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="w-full lg:w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     />
                 </div>
-                <div className="flex items-center space-x-2 w-full md:w-auto">
+                <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                    <button
+                        onClick={onExportRecords}
+                        className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
+                        title="Експортувати записи"
+                    >
+                        <DownloadIcon />
+                    </button>
+                     <button
+                        onClick={handleImportClick}
+                        className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
+                        title="Імпортувати записи"
+                    >
+                        <UploadIcon />
+                    </button>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleFileChange} 
+                        accept=".json" 
+                        style={{ display: 'none' }} 
+                    />
+                    <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
                     <button
                         onClick={handlePrintRecords}
-                        className="flex-grow md:flex-none flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-600 dark:text-gray-100 hover:dark:bg-gray-500"
+                        className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
+                        title="Роздрукувати список"
                     >
                         <PrintIcon />
-                        <span className="ml-2">Роздрукувати список</span>
                     </button>
                     <button
                         onClick={handleGenerateMonthlyReport}
-                        className="flex-grow md:flex-none flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-600 dark:text-gray-100 hover:dark:bg-gray-500"
+                        className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
+                        title="Сформувати місячний звіт"
                     >
                         <ReportIcon />
-                        <span className="ml-2">Сформувати місячний звіт</span>
                     </button>
                     <button
                         onClick={handleGenerateJournal}
-                        className="flex-grow md:flex-none flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-600 dark:text-gray-100 hover:dark:bg-gray-500"
+                        className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
+                        title="Надрукувати журнал"
                     >
                         <JournalIcon />
-                        <span className="ml-2">Надрукувати журнал</span>
                     </button>
                     <button 
                         onClick={handleOpenAddModal}
-                        className="flex-grow md:flex-none flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                        className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors ml-auto lg:ml-0">
                         <span className="text-xl mr-2 font-light">+</span> Додати запис
                     </button>
                 </div>

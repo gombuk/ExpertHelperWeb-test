@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import Statistics from './components/Statistics';
@@ -408,12 +407,133 @@ const initialAppData: AppData = {
   }
 };
 
+const API_URL = 'http://localhost:3001/api/data';
+
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [activeMode, setActiveMode] = useState<AppMode>('conclusions');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [appData, setAppData] = useState<AppData>(initialAppData);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+      setToast({ message, type });
+      setTimeout(() => {
+          setToast(null);
+      }, 3000);
+  }, []);
+
+  // --- Data Persistence Logic ---
+
+  // 1. Load data on startup
+  useEffect(() => {
+      const loadData = async () => {
+          try {
+              // Try fetching from server first
+              const response = await fetch(API_URL);
+              if (response.ok) {
+                  const serverData = await response.json();
+                  if (serverData && Object.keys(serverData).length > 0) {
+                      setAppData(serverData);
+                      console.log('Data loaded from server');
+                  } else {
+                       // Server empty, try local storage fallback
+                       loadFromLocalStorage();
+                  }
+              } else {
+                  throw new Error('Server not reachable');
+              }
+          } catch (error) {
+              console.warn('Could not load from server, falling back to localStorage', error);
+              loadFromLocalStorage();
+          } finally {
+              setIsDataLoaded(true);
+          }
+      };
+
+      const loadFromLocalStorage = () => {
+           const savedData = localStorage.getItem('appData');
+           if (savedData) {
+               try {
+                   setAppData(JSON.parse(savedData));
+                   console.log('Data loaded from localStorage');
+               } catch (e) {
+                   console.error('Failed to parse localStorage data', e);
+               }
+           }
+      };
+
+      loadData();
+  }, []);
+
+  // 2. Save data on change
+  useEffect(() => {
+      if (!isDataLoaded) return; // Don't save before initial load is complete
+
+      // Save to localStorage (always as backup)
+      localStorage.setItem('appData', JSON.stringify(appData));
+
+      // Try saving to server
+      const saveDataToServer = async () => {
+          try {
+              await fetch(API_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(appData),
+              });
+          } catch (error) {
+               // Silent fail for server save if offline, already saved to localStorage
+               // console.warn('Failed to save to server', error);
+          }
+      };
+      saveDataToServer();
+
+  }, [appData, isDataLoaded]);
+
+  // --- Import / Export Logic ---
+
+  const importRecords = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedData = JSON.parse(e.target?.result as string);
+        if (Array.isArray(importedData)) {
+          setAppData(prevData => ({
+            ...prevData,
+            [activeMode]: {
+              ...prevData[activeMode],
+              records: [...importedData, ...prevData[activeMode].records]
+            }
+          }));
+          showToast(`Успішно імпортовано ${importedData.length} записів.`);
+        } else {
+          showToast('Невірний формат файлу. Очікується масив записів.', 'error');
+        }
+      } catch (error) {
+        showToast('Помилка при читанні файлу.', 'error');
+        console.error("Import error:", error);
+      }
+    };
+    reader.readAsText(file);
+  }, [activeMode, showToast]);
+
+  const exportRecords = useCallback(() => {
+    const dataToExport = appData[activeMode].records;
+    const jsonString = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${activeMode}_export_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast('Експорт успішний.');
+  }, [appData, activeMode, showToast]);
+
+
   
   const [selectedExpert, setSelectedExpert] = useState('all');
   
@@ -447,13 +567,6 @@ const App: React.FC = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-      setToast({ message, type });
-      setTimeout(() => {
-          setToast(null);
-      }, 3000);
-  };
 
   useEffect(() => {
     // Update selectedMonth if initial data changes or if the current selectedMonth is no longer valid
@@ -719,6 +832,8 @@ const App: React.FC = () => {
                 showToast={showToast}
                 activeMode={activeMode}
                 selectedMonth={selectedMonth}
+                onImportRecords={importRecords}
+                onExportRecords={exportRecords}
               />
             </div>
           </>
