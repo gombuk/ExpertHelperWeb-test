@@ -969,11 +969,11 @@ export const generateCertificateOrderHtml = (record: AppRecord, firm: Firm, gene
                         <th style="width: 9%;">Вартість<br>сертифікату<br>(грн)</th>
                         <th style="width: 9%;">Кількість дод.<br>товар. позицій</th>
                         <th style="width: 8%;">Вартість дод.<br>тов. поз. (грн)</th>
-                        <th style="width: 6%;">Кількість<br>дод.<br>аркушів</th>
-                        <th style="width: 8%;">Вартість<br>дод.<br>арк. (грн)</th>
-                        <th style="width: 9%;">Сума, грн</th>
-                        <th style="width: 8%;">ПДВ (20%),<br>грн</th>
-                        <th style="width: 9%;">Всього до<br>сплати, грн</th>
+                        <th style="6%;">Кількість<br>дод.<br>аркушів</th>
+                        <th style="8%;">Вартість<br>дод.<br>арк. (грн)</th>
+                        <th style="9%;">Сума, грн</th>
+                        <th style="8%;">ПДВ (20%),<br>грн</th>
+                        <th style="9%;">Всього до<br>сплати, грн</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1328,7 +1328,6 @@ export const generateMonthlyReportHtml = (
 
     Object.keys(groupedByExpert).sort().forEach(expertName => {
         const expertData = groupedByExpert[expertName];
-        let expertFirmIndex = 0; // Track firm index for rowspan logic
 
         Object.keys(expertData.firms).sort().forEach(firmName => {
             const firmData = expertData.firms[firmName];
@@ -1338,9 +1337,13 @@ export const generateMonthlyReportHtml = (
 
             firmData.records.forEach((record, recordIndex) => {
                 const numericRegNumber = record.registrationNumber.match(/(\d+)/)?.[1] || record.registrationNumber;
+                
+                // Calculate rowspan for the firm name cell
+                const firmRowspan = isSingleRecordFirm ? 1 : firmData.records.length + 1; // +1 for the firm total row if present
+
                 tableRowsHtml += `
                     <tr>
-                        ${recordIndex === 0 && expertFirmIndex === 0 ? `<td rowspan="${isSingleRecordFirm ? 1 : firmData.records.length + 1}" class="firm-name">${firmName}</td>` : ''}
+                        ${recordIndex === 0 ? `<td rowspan="${firmRowspan}" class="firm-name">${firmName}</td>` : ''}
                         <td class="reg-num">${numericRegNumber}</td>
                         <td class="units">${isConclusions ? '1' : record.units}</td>
                         <td class="date">${formatDateForReport(record.endDate)}</td>
@@ -1353,14 +1356,13 @@ export const generateMonthlyReportHtml = (
             if (!isSingleRecordFirm) {
                 tableRowsHtml += `
                     <tr class="firm-total">
-                        <td></td>
-                        <td class="total-units-firm">${isConclusions ? firmData.totalRecordsCount : firmData.totalUnits}</td>
-                        <td></td>
-                        <td class="total-sum-firm">${formatCurrencyForReport(firmData.totalSum)}</td>
+                        <td colspan="2"></td> <!-- Covers "Замовник" and "№ наряду" -->
+                        <td class="total-units-firm">${isConclusions ? firmData.totalRecordsCount : firmData.totalUnits}</td> <!-- "Кількість" -->
+                        <td></td> <!-- "Дата видачі" (empty) -->
+                        <td class="total-sum-firm">${formatCurrencyForReport(firmData.totalSum)}</td> <!-- "Сума, грн" -->
                     </tr>
                 `;
             } 
-            expertFirmIndex++; // Increment firm index for correct rowspan logic
         });
 
         // Expert totals
@@ -1689,7 +1691,7 @@ export const generateJournalHtml = (
                             <th style="width: 10%;">Дата початку</th>
                             <th style="width: 10%;">Дата видачі</th>
                             <th style="width: 20%;">Найменування фірми</th>
-                            <th style="width: 5%;">Кількість</th>
+                            <th style="5%;">Кількість</th>
                             <th style="width: 15%;">Назва товару</th>
                             <th style="width: 10%;">ПІБ експерта</th>
                             <th style="width: 10%;">Сума до оплати</th>

@@ -146,46 +146,46 @@ const Firms: React.FC<FirmsProps> = ({ setCurrentView, firms, onAddFirm, onUpdat
     };
 
     return (
-        <div className="bg-white p-6 md:p-8 rounded-xl shadow-md">
-            <button onClick={() => setCurrentView('dashboard')} className="flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6">
+        <div className="bg-white p-6 md:p-8 rounded-xl shadow-md dark:bg-gray-800 dark:text-gray-100">
+            <button onClick={() => setCurrentView('dashboard')} className="flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6 dark:text-gray-300 hover:dark:text-white">
                 <BackArrowIcon />
                 Повернутися назад
             </button>
 
-            <h1 className="text-2xl font-bold mb-6">Управління фірмами</h1>
+            <h1 className="text-2xl font-bold mb-6 dark:text-white">Управління фірмами</h1>
 
-            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8">
-                <h2 className="text-lg font-semibold mb-4">{isEditing ? 'Редагувати фірму' : 'Додати нову фірму'}</h2>
+            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8 dark:bg-gray-700 dark:border-gray-600">
+                <h2 className="text-lg font-semibold mb-4 dark:text-white">{isEditing ? 'Редагувати фірму' : 'Додати нову фірму'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Назва фірми *</label>
-                            <input type="text" id="name" name="name" value={formState.name} onChange={handleInputChange} placeholder="Введіть назву фірми" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
+                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Назва фірми *</label>
+                            <input type="text" id="name" name="name" value={formState.name} onChange={handleInputChange} placeholder="Введіть назву фірми" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
                         </div>
                         <div>
-                            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Адреса *</label>
-                            <input type="text" id="address" name="address" value={formState.address} onChange={handleInputChange} placeholder="Введіть адресу" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
+                            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Адреса *</label>
+                            <input type="text" id="address" name="address" value={formState.address} onChange={handleInputChange} placeholder="Введіть адресу" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
                         </div>
                         <div>
-                            <label htmlFor="directorName" className="block text-sm font-medium text-gray-700 mb-1">ПІБ директора *</label>
-                            <input type="text" id="directorName" name="directorName" value={formState.directorName} onChange={handleInputChange} placeholder="Введіть ПІБ директора" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
+                            <label htmlFor="directorName" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">ПІБ директора *</label>
+                            <input type="text" id="directorName" name="directorName" value={formState.directorName} onChange={handleInputChange} placeholder="Введіть ПІБ директора" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
                         </div>
                         <div>
-                            <label htmlFor="edrpou" className="block text-sm font-medium text-gray-700 mb-1">Код ЄДРПОУ *</label>
-                            <input type="text" id="edrpou" name="edrpou" value={formState.edrpou} onChange={handleInputChange} placeholder="Введіть код ЄДРПОУ" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
+                            <label htmlFor="edrpou" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Код ЄДРПОУ *</label>
+                            <input type="text" id="edrpou" name="edrpou" value={formState.edrpou} onChange={handleInputChange} placeholder="Введіть код ЄДРПОУ" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
                         </div>
                         <div>
-                            <label htmlFor="taxNumber" className="block text-sm font-medium text-gray-700 mb-1">ІПН *</label>
-                            <input type="text" id="taxNumber" name="taxNumber" value={formState.taxNumber} onChange={handleInputChange} placeholder="Введіть ІПН" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
+                            <label htmlFor="taxNumber" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">ІПН *</label>
+                            <input type="text" id="taxNumber" name="taxNumber" value={formState.taxNumber} onChange={handleInputChange} placeholder="Введіть ІПН" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
                         </div>
                          <div>
-                            <label htmlFor="productName" className="block text-sm font-medium text-gray-700 mb-1">Найменування товару *</label>
-                            <input type="text" id="productName" name="productName" value={formState.productName} onChange={handleInputChange} placeholder="Введіть найменування" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
+                            <label htmlFor="productName" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Найменування товару *</label>
+                            <input type="text" id="productName" name="productName" value={formState.productName} onChange={handleInputChange} placeholder="Введіть найменування" required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
                         </div>
                     </div>
                     <div className="flex justify-end pt-4 space-x-3">
                         {isEditing && (
-                            <button type="button" onClick={handleCancel} className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                            <button type="button" onClick={handleCancel} className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 hover:dark:bg-gray-600">
                                 Скасувати
                             </button>
                         )}
@@ -199,37 +199,37 @@ const Firms: React.FC<FirmsProps> = ({ setCurrentView, firms, onAddFirm, onUpdat
 
             <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-semibold">Список фірм</h2>
+                    <h2 className="text-lg font-semibold dark:text-white">Список фірм</h2>
                     <button
                         onClick={handlePrintFirms}
-                        className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                        className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-600 dark:text-gray-100 hover:dark:bg-gray-500"
                     >
                         <PrintIcon />
                         Роздрукувати
                     </button>
                 </div>
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                <div className="overflow-x-auto border border-gray-200 rounded-lg dark:border-gray-700">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-700">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Назва фірми</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Найменування товару</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Адреса</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ПІБ директора</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ЄДРПОУ</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ІПН</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дії</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-200">Назва фірми</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-200">Найменування товару</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-200">Адреса</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-200">ПІБ директора</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-200">ЄДРПОУ</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-200">ІПН</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-200">Дії</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                             {firms.map((firm) => (
-                                <tr key={firm.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{firm.name}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{firm.productName}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{firm.address}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{firm.directorName}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{firm.edrpou}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{firm.taxNumber}</td>
+                                <tr key={firm.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{firm.name}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{firm.productName}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{firm.address}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{firm.directorName}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{firm.edrpou}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{firm.taxNumber}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div className="flex items-center space-x-3">
                                             <button onClick={() => handleEditClick(firm)} title="Редагувати" className="focus:outline-none"><EditIcon /></button>
@@ -245,13 +245,13 @@ const Firms: React.FC<FirmsProps> = ({ setCurrentView, firms, onAddFirm, onUpdat
             </div>
             {isDeleteModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
-                        <h3 id="delete-modal-title" className="text-lg font-bold text-gray-900">Підтвердження видалення</h3>
-                        <p className="mt-2 text-sm text-gray-600">Ви впевнені, що хочете видалити цю фірму? Цю дію неможливо буде скасувати.</p>
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm dark:bg-gray-800 dark:text-gray-100">
+                        <h3 id="delete-modal-title" className="text-lg font-bold text-gray-900 dark:text-white">Підтвердження видалення</h3>
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Ви впевнені, що хочете видалити цю фірму? Цю дію неможливо буде скасувати.</p>
                         <div className="mt-6 flex justify-end space-x-3">
                             <button 
                                 onClick={handleCloseDeleteModal}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 hover:dark:bg-gray-600"
                             >
                                 Скасувати
                             </button>
@@ -267,15 +267,15 @@ const Firms: React.FC<FirmsProps> = ({ setCurrentView, firms, onAddFirm, onUpdat
             )}
             {isCopyModalOpen && firmToCopy && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center" role="dialog" aria-modal="true" aria-labelledby="copy-modal-title">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
-                        <h3 id="copy-modal-title" className="text-lg font-bold text-gray-900">Підтвердження копіювання</h3>
-                        <p className="mt-2 text-sm text-gray-600">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm dark:bg-gray-800 dark:text-gray-100">
+                        <h3 id="copy-modal-title" className="text-lg font-bold text-gray-900 dark:text-white">Підтвердження копіювання</h3>
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                             Ви впевнені, що хочете скопіювати фірму "{firmToCopy.name}" до списку "{activeMode === 'conclusions' ? 'Сертифікати' : 'Висновки'}"?
                         </p>
                         <div className="mt-6 flex justify-end space-x-3">
                             <button 
                                 onClick={handleCloseCopyModal}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 hover:dark:bg-gray-600"
                             >
                                 Скасувати
                             </button>

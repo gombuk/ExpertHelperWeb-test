@@ -90,35 +90,35 @@ const PlanSettings: React.FC<PlanSettingsProps> = ({ setCurrentView, monthlyPlan
     };
 
     return (
-        <div className="bg-white p-6 md:p-8 rounded-xl shadow-md max-w-4xl mx-auto">
-            <button onClick={() => setCurrentView('dashboard')} className="flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6">
+        <div className="bg-white p-6 md:p-8 rounded-xl shadow-md max-w-4xl mx-auto dark:bg-gray-800 dark:text-gray-100">
+            <button onClick={() => setCurrentView('dashboard')} className="flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6 dark:text-gray-300 hover:dark:text-white">
                 <BackArrowIcon />
                 Повернутися назад
             </button>
             
-            <h1 className="text-2xl font-bold mb-8">Налаштування місячного плану</h1>
+            <h1 className="text-2xl font-bold mb-8 dark:text-white">Налаштування місячного плану</h1>
 
             <div className="space-y-6">
                 <div>
-                    <label htmlFor="month-select" className="block text-sm font-medium text-gray-700 mb-1">Виберіть місяць</label>
-                    <input type="month" id="month-select" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
+                    <label htmlFor="month-select" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Виберіть місяць</label>
+                    <input type="month" id="month-select" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                 </div>
 
                 <div>
-                    <label htmlFor="total-plan" className="block text-sm font-medium text-gray-700 mb-1">Загальний місячний план (грн)</label>
-                    <input type="number" id="total-plan" value={currentPlan.totalPlan} onChange={e => handleTotalPlanChange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
+                    <label htmlFor="total-plan" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Загальний місячний план (грн)</label>
+                    <input type="number" id="total-plan" value={currentPlan.totalPlan} onChange={e => handleTotalPlanChange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                 </div>
                 
                 <div className="pt-4">
                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                        <h2 className="text-lg font-semibold">Плани експертів</h2>
+                        <h2 className="text-lg font-semibold dark:text-white">Плани експертів</h2>
                         <div className="flex items-center space-x-2">
                             <input 
                                 type="text" 
                                 placeholder="Ім'я експерта"
                                 value={newExpertName}
                                 onChange={(e) => setNewExpertName(e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 w-48" 
+                                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 w-48 dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
                             />
                             <button 
                                 onClick={handleAddExpert}
@@ -130,15 +130,15 @@ const PlanSettings: React.FC<PlanSettingsProps> = ({ setCurrentView, monthlyPlan
                     </div>
                     <div className="space-y-4">
                         {currentPlan.expertPlans.map(expert => (
-                            <div key={expert.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-center justify-between gap-4">
+                            <div key={expert.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-center justify-between gap-4 dark:bg-gray-700 dark:border-gray-600">
                                 <div className="flex-grow">
-                                    <label htmlFor={`expert-plan-${expert.id}`} className="block text-sm font-medium text-gray-900 mb-1">{expert.name}</label>
+                                    <label htmlFor={`expert-plan-${expert.id}`} className="block text-sm font-medium text-gray-900 mb-1 dark:text-white">{expert.name}</label>
                                     <input 
                                         type="number" 
                                         id={`expert-plan-${expert.id}`}
                                         value={expert.planAmount}
                                         onChange={(e) => handlePlanChange(expert.id, e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" 
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white" 
                                     />
                                 </div>
                                 <button onClick={() => handleDeleteExpert(expert.id)} className="self-end mb-2 focus:outline-none">

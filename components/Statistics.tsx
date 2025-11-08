@@ -7,7 +7,7 @@ import { calculateCost } from '../utils/calculateCost';
 import type { AppMode } from '../App';
 
 const ChartIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400 hover:text-gray-600 cursor-pointer" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400 hover:text-gray-600 cursor-pointer dark:text-gray-500 hover:dark:text-gray-400" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
     </svg>
 );
@@ -101,28 +101,28 @@ const Statistics: React.FC<StatisticsProps> = ({
 
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-md">
+        <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:text-gray-100">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold">Статистика</h2>
+                <h2 className="text-xl font-semibold dark:text-white">Статистика</h2>
                 <ChartIcon />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
-                    <label htmlFor="expert" className="block text-sm font-medium text-gray-700 mb-1">Експерт</label>
-                    <select id="expert" value={selectedExpert} onChange={(e) => setSelectedExpert(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <label htmlFor="expert" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Експерт</label>
+                    <select id="expert" value={selectedExpert} onChange={(e) => setSelectedExpert(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         <option value="all">Всі експерти</option>
                         {experts.map(expert => <option key={expert} value={expert}>{expert}</option>)}
                     </select>
                 </div>
                 <div className="md:col-span-2">
-                    <label htmlFor="month-select" className="block text-sm font-medium text-gray-700 mb-1">Виберіть місяць</label>
+                    <label htmlFor="month-select" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Виберіть місяць</label>
                     <input 
                         type="month" 
                         id="month-select" 
                         value={selectedMonth}
                         onChange={(e) => setSelectedMonth(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
                     />
                 </div>
             </div>
@@ -156,15 +156,15 @@ const Statistics: React.FC<StatisticsProps> = ({
             </div>
 
 
-            <div className="border-t border-gray-200 pt-6">
+            <div className="border-t border-gray-200 pt-6 dark:border-gray-700">
                 <div className="mb-8">
-                    <h3 className="text-lg font-semibold mb-4">Виконання загального плану</h3>
+                    <h3 className="text-lg font-semibold mb-4 dark:text-white">Виконання загального плану</h3>
                     <div>
                         <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm font-medium text-gray-700">Загальний план</span>
-                            <span className="text-sm font-medium text-gray-500">{formatCurrency(totalCompletedOverall)} / {formatCurrency(monthlyPlan.totalPlan)}</span>
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Загальний план</span>
+                            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{formatCurrency(totalCompletedOverall)} / {formatCurrency(monthlyPlan.totalPlan)}</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                             <div 
                                 className="bg-green-600 h-2.5 rounded-full" 
                                 style={{ width: `${totalPlanPercentage}%` }}
@@ -175,13 +175,13 @@ const Statistics: React.FC<StatisticsProps> = ({
                                 aria-label="Прогрес виконання загального плану"
                             ></div>
                         </div>
-                        <div className="text-right text-sm font-semibold text-green-700 mt-1">
+                        <div className="text-right text-sm font-semibold text-green-700 mt-1 dark:text-green-400">
                             {totalPlanPercentage.toFixed(2)}%
                         </div>
                     </div>
                  </div>
 
-                 <h3 className="text-lg font-semibold mb-4">Виконання плану експертами</h3>
+                 <h3 className="text-lg font-semibold mb-4 dark:text-white">Виконання плану експертами</h3>
                  <div className="space-y-4">
                      {monthlyPlan.expertPlans.map(plan => {
                          const expertRecords = records.filter(r => r.expert === plan.name && r.status === 'Виконано');
@@ -208,10 +208,10 @@ const Statistics: React.FC<StatisticsProps> = ({
                          return (
                              <div key={plan.id}>
                                  <div className="flex justify-between items-center mb-1">
-                                     <span className="text-sm font-medium text-gray-700">{plan.name}</span>
-                                     <span className="text-sm font-medium text-gray-500">{formatCurrency(totalCompleted)} / {formatCurrency(planAmount)}</span>
+                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{plan.name}</span>
+                                     <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{formatCurrency(totalCompleted)} / {formatCurrency(planAmount)}</span>
                                  </div>
-                                 <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                 <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                                      <div 
                                          className="bg-blue-600 h-2.5 rounded-full" 
                                          style={{ width: `${percentage}%` }}
@@ -222,7 +222,7 @@ const Statistics: React.FC<StatisticsProps> = ({
                                          aria-label={`Прогрес для ${plan.name}`}
                                      ></div>
                                  </div>
-                                 <div className="text-right text-sm font-semibold text-blue-700 mt-1">
+                                 <div className="text-right text-sm font-semibold text-blue-700 mt-1 dark:text-blue-400">
                                      {percentage.toFixed(2)}%
                                  </div>
                              </div>

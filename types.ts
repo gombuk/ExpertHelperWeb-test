@@ -77,3 +77,5 @@ export interface MonthlyPlan {
   totalPlan: number;
   expertPlans: ExpertPlan[];
 }
+
+export type Theme = 'light' | 'dark';

@@ -11,6 +11,7 @@ import { Record as AppRecord, CostModelRow, GeneralSettings, Firm, MonthlyPlan }
 
 export type View = 'dashboard' | 'settings' | 'firms' | 'plan';
 export type AppMode = 'conclusions' | 'certificates';
+export type Theme = 'light' | 'dark';
 
 interface AppData {
   conclusions: {
@@ -427,6 +428,26 @@ const App: React.FC = () => {
 
   const [selectedMonth, setSelectedMonth] = useState(initialSelectedMonth);
 
+  // Dark mode state and logic
+  const [theme, setTheme] = useState<Theme>(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'light';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
+
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
       setToast({ message, type });
       setTimeout(() => {
@@ -462,7 +483,8 @@ const App: React.FC = () => {
         records: [recordWithId, ...prevData[activeMode].records],
       },
     }));
-    showToast('Запис додано успішно!');
+    const recordType = activeMode === 'conclusions' ? 'Експертний висновок' : 'Сертифікат';
+    showToast(`${recordType} №${newRecord.registrationNumber} для ${newRecord.companyName} зареєстрований.`);
   };
   
   const updateRecord = (updatedRecord: AppRecord) => {
@@ -705,13 +727,15 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="bg-gray-100 min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="bg-gray-100 min-h-screen p-4 sm:p-6 lg:p-8 dark:bg-gray-900">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         <div className="max-w-7xl mx-auto">
             <Header 
               setCurrentView={setCurrentView}
               activeMode={activeMode}
               setActiveMode={setActiveMode}
+              theme={theme}
+              toggleTheme={toggleTheme}
             />
             <main className="mt-8">
                 {renderContent()}

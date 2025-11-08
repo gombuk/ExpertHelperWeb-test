@@ -24,7 +24,7 @@ interface RecordsTableProps {
 }
 
 const SearchIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
     </svg>
 );
@@ -36,13 +36,13 @@ const EditIcon = () => (
 );
 
 const DeleteIcon = () => (
-     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 hover:text-gray-700" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
+     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500 hover:text-red-700" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
 );
 
 const PrintIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 hover:text-gray-700" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-700 dark:text-gray-200" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
     </svg>
 );
@@ -62,9 +62,9 @@ const JournalIcon = () => (
 
 const Tag: React.FC<{ text: string, color: 'orange' | 'red' | 'neutral' }> = ({ text, color }) => {
     const colorClasses = {
-        orange: 'bg-orange-100 text-orange-800',
-        red: 'bg-red-100 text-red-800',
-        neutral: 'bg-gray-100 text-gray-800'
+        orange: 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100',
+        red: 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100',
+        neutral: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
     }[color];
     
     return (
@@ -76,8 +76,8 @@ const Tag: React.FC<{ text: string, color: 'orange' | 'red' | 'neutral' }> = ({ 
 
 const StatusTag: React.FC<{ status: 'Виконано' | 'Не виконано' }> = ({ status }) => {
     const colorClasses = status === 'Виконано'
-        ? 'bg-green-100 text-green-800'
-        : 'bg-yellow-100 text-yellow-800';
+        ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100';
     return (
         <span className={`px-2 py-1 text-xs font-semibold rounded-lg ${colorClasses}`}>
             {status}
@@ -185,7 +185,7 @@ const RecordsTable: React.FC<RecordsTableProps> = ({ records, onAddRecord, onUpd
     };
 
     const handlePrintRecords = () => {
-        const html = generateRecordsHtml(sortedRecords, activeMode);
+        const html = generateRecordsHtml(recordsWithCost, activeMode);
         const printWindow = window.open('', '_blank');
         if (printWindow) {
             printWindow.document.write(html);
@@ -352,7 +352,7 @@ const RecordsTable: React.FC<RecordsTableProps> = ({ records, onAddRecord, onUpd
 
     return (
         <>
-        <div className="bg-white p-6 rounded-xl shadow-md">
+        <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:text-gray-100">
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <div className="relative w-full md:w-auto">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -361,27 +361,27 @@ const RecordsTable: React.FC<RecordsTableProps> = ({ records, onAddRecord, onUpd
                     <input 
                         type="text" 
                         placeholder="Пошук записів..." 
-                        className="w-full md:w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full md:w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     />
                 </div>
                 <div className="flex items-center space-x-2 w-full md:w-auto">
                     <button
                         onClick={handlePrintRecords}
-                        className="flex-grow md:flex-none flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                        className="flex-grow md:flex-none flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-600 dark:text-gray-100 hover:dark:bg-gray-500"
                     >
                         <PrintIcon />
                         <span className="ml-2">Роздрукувати список</span>
                     </button>
                     <button
                         onClick={handleGenerateMonthlyReport}
-                        className="flex-grow md:flex-none flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                        className="flex-grow md:flex-none flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-600 dark:text-gray-100 hover:dark:bg-gray-500"
                     >
                         <ReportIcon />
                         <span className="ml-2">Сформувати місячний звіт</span>
                     </button>
                     <button
                         onClick={handleGenerateJournal}
-                        className="flex-grow md:flex-none flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                        className="flex-grow md:flex-none flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-600 dark:text-gray-100 hover:dark:bg-gray-500"
                     >
                         <JournalIcon />
                         <span className="ml-2">Надрукувати журнал</span>
@@ -395,21 +395,21 @@ const RecordsTable: React.FC<RecordsTableProps> = ({ records, onAddRecord, onUpd
             </div>
 
             <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
                             {headers.map(header => (
                                 <th 
                                     key={header.key} 
                                     scope="col" 
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider select-none"
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider select-none dark:text-gray-200"
                                     onClick={() => header.sortable !== false && requestSort(header.key)}
                                     style={{ cursor: header.sortable !== false ? 'pointer' : 'default' }}
                                 >
                                     <div className="flex items-center">
                                         {header.label}
                                         {sortConfig && sortConfig.key === header.key && (
-                                            <span className="ml-2 text-gray-600">
+                                            <span className="ml-2 text-gray-600 dark:text-gray-300">
                                                 {sortConfig.direction === 'ascending' ? '▲' : '▼'}
                                             </span>
                                         )}
@@ -418,50 +418,50 @@ const RecordsTable: React.FC<RecordsTableProps> = ({ records, onAddRecord, onUpd
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                         {sortedRecords.map((record) => (
-                                <tr key={record.id} className="hover:bg-gray-50">
+                                <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     {activeMode === 'conclusions' ? (
                                         <>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{record.registrationNumber}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.actNumber}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDateString(record.startDate)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDateString(record.endDate)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.companyName}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.comment}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.units}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.conclusionType === 'standard' ? record.models : '—'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.conclusionType === 'standard' ? record.positions : '—'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.conclusionType === 'contractual' ? record.pages : '—'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.codes}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.conclusionType === 'standard' ? (record.complexity ? <Tag text="Так" color="orange" /> : '') : '—'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.conclusionType === 'standard' ? (record.urgency ? <Tag text="Так" color="red" /> : <Tag text="Ні" color="neutral" />) : '—'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.discount}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{conclusionTypeDisplay[record.conclusionType as keyof typeof conclusionTypeDisplay] || 'Стандартний'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">{formatCurrency(record.sumWithoutDiscount)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">{formatCurrency(record.sumWithDiscount)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.expert}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><StatusTag status={record.status} /></td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{record.registrationNumber}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.actNumber}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.startDate)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.endDate)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.companyName}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.comment}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.units}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.conclusionType === 'standard' ? record.models : '—'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.conclusionType === 'standard' ? record.positions : '—'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.conclusionType === 'contractual' ? record.pages : '—'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.codes}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.conclusionType === 'standard' ? (record.complexity ? <Tag text="Так" color="orange" /> : '') : '—'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.conclusionType === 'standard' ? (record.urgency ? <Tag text="Так" color="red" /> : <Tag text="Ні" color="neutral" />) : '—'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.discount}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{conclusionTypeDisplay[record.conclusionType as keyof typeof conclusionTypeDisplay] || 'Стандартний'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium dark:text-gray-200">{formatCurrency(record.sumWithoutDiscount)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium dark:text-gray-200">{formatCurrency(record.sumWithDiscount)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.expert}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300"><StatusTag status={record.status} /></td>
                                         </>
                                     ) : (
                                         <>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{record.registrationNumber}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.actNumber}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDateString(record.startDate)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDateString(record.endDate)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.companyName}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.comment}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.certificateForm}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{certificateServiceTypeDisplay[record.certificateServiceType as keyof typeof certificateServiceTypeDisplay] || 'Стандартний'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{productionTypeDisplay[record.productionType as keyof typeof productionTypeDisplay] || ''}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.units}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.pages}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.additionalPages}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.positions}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.urgency ? <Tag text="Так" color="red" /> : <Tag text="Ні" color="neutral" />}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">{formatCurrency(record.sumWithoutDiscount)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.expert}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><StatusTag status={record.status} /></td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{record.registrationNumber}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.actNumber}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.startDate)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.endDate)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.companyName}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.comment}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.certificateForm}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{certificateServiceTypeDisplay[record.certificateServiceType as keyof typeof certificateServiceTypeDisplay] || 'Стандартний'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{productionTypeDisplay[record.productionType as keyof typeof productionTypeDisplay] || ''}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.units}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.pages}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.additionalPages}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.positions}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.urgency ? <Tag text="Так" color="red" /> : <Tag text="Ні" color="neutral" />}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium dark:text-gray-200">{formatCurrency(record.sumWithoutDiscount)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.expert}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300"><StatusTag status={record.status} /></td>
                                         </>
                                     )}
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -501,13 +501,13 @@ const RecordsTable: React.FC<RecordsTableProps> = ({ records, onAddRecord, onUpd
         )}
         {isDeleteModalOpen && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
-                <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
-                    <h3 id="delete-modal-title" className="text-lg font-bold text-gray-900">Підтвердження видалення</h3>
-                    <p className="mt-2 text-sm text-gray-600">Ви впевнені, що хочете видалити цей запис? Цю дію неможливо буде скасувати.</p>
+                <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm dark:bg-gray-800 dark:text-gray-100">
+                    <h3 id="delete-modal-title" className="text-lg font-bold text-gray-900 dark:text-white">Підтвердження видалення</h3>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Ви впевнені, що хочете видалити цей запис? Цю дію неможливо буде скасувати.</p>
                     <div className="mt-6 flex justify-end space-x-3">
                         <button 
                             onClick={handleCloseDeleteModal}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 hover:dark:bg-gray-600"
                         >
                             Скасувати
                         </button>

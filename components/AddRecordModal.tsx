@@ -220,10 +220,10 @@ const RecordModal: React.FC<RecordModalProps> = ({
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-                <div className="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h2 className="text-xl font-bold">{title}</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col dark:bg-gray-800 dark:text-gray-100">
+                <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h2 className="text-xl font-bold dark:text-white">{title}</h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 hover:dark:text-gray-300">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -233,38 +233,38 @@ const RecordModal: React.FC<RecordModalProps> = ({
                 <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label htmlFor="registrationNumber" className="block text-sm font-medium text-gray-700 mb-1">Реєстраційний номер *</label>
-                            <input type="text" name="registrationNumber" value={formState.registrationNumber} onChange={handleInputChange} required className="input-field" />
+                            <label htmlFor="registrationNumber" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Реєстраційний номер *</label>
+                            <input type="text" name="registrationNumber" value={formState.registrationNumber} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         <div>
-                            <label htmlFor="actNumber" className="block text-sm font-medium text-gray-700 mb-1">Акт</label>
-                            <input type="text" name="actNumber" value={formState.actNumber || ''} onChange={handleInputChange} className="input-field" />
+                            <label htmlFor="actNumber" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Акт</label>
+                            <input type="text" name="actNumber" value={formState.actNumber || ''} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         <div>
-                            <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">Назва компанії *</label>
-                            <select name="companyName" value={formState.companyName} onChange={handleInputChange} required className="input-field">
+                            <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Назва компанії *</label>
+                            <select name="companyName" value={formState.companyName} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                 <option value="" disabled>Виберіть компанію</option>
                                 {firms.map(firm => <option key={firm.id} value={firm.name}>{firm.name}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">Дата початку *</label>
-                            <input type="date" name="startDate" value={formState.startDate} onChange={handleInputChange} required className="input-field" />
+                            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Дата початку *</label>
+                            <input type="date" name="startDate" value={formState.startDate} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         <div>
-                            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">Дата закінчення *</label>
-                            <input type="date" name="endDate" value={formState.endDate} onChange={handleInputChange} required className="input-field" />
+                            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Дата закінчення *</label>
+                            <input type="date" name="endDate" value={formState.endDate} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         <div>
-                            <label htmlFor="expert" className="block text-sm font-medium text-gray-700 mb-1">Експерт *</label>
-                            <select name="expert" value={formState.expert} onChange={handleInputChange} required className="input-field">
+                            <label htmlFor="expert" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Експерт *</label>
+                            <select name="expert" value={formState.expert} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                 <option value="" disabled>Виберіть експерта</option>
                                 {experts.map(expert => <option key={expert} value={expert}>{expert}</option>)}
                             </select>
                         </div>
                          {activeMode === 'conclusions' && (
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Тип тарифу</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200">Тип тарифу</label>
                                 <div className="flex items-center space-x-4">
                                     <div className="flex items-center">
                                         <input
@@ -274,9 +274,9 @@ const RecordModal: React.FC<RecordModalProps> = ({
                                             value="standard"
                                             checked={formState.conclusionType === 'standard'}
                                             onChange={handleInputChange}
-                                            className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                                            className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
                                         />
-                                        <label htmlFor="standard_tariff" className="ml-2 block text-sm text-gray-900">
+                                        <label htmlFor="standard_tariff" className="ml-2 block text-sm text-gray-900 dark:text-white">
                                             Стандартний
                                         </label>
                                     </div>
@@ -288,9 +288,9 @@ const RecordModal: React.FC<RecordModalProps> = ({
                                             value="contractual"
                                             checked={formState.conclusionType === 'contractual'}
                                             onChange={handleInputChange}
-                                            className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                                            className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
                                         />
-                                        <label htmlFor="contractual_tariff" className="ml-2 block text-sm text-gray-900">
+                                        <label htmlFor="contractual_tariff" className="ml-2 block text-sm text-gray-900 dark:text-white">
                                             Договірний
                                         </label>
                                     </div>
@@ -299,8 +299,8 @@ const RecordModal: React.FC<RecordModalProps> = ({
                         )}
                         {activeMode === 'certificates' && (
                              <div>
-                                <label htmlFor="certificateForm" className="block text-sm font-medium text-gray-700 mb-1">Форма сертифікату</label>
-                                <select name="certificateForm" value={formState.certificateForm || ''} onChange={handleInputChange} className="input-field">
+                                <label htmlFor="certificateForm" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Форма сертифікату</label>
+                                <select name="certificateForm" value={formState.certificateForm || ''} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                     <option value="" disabled>Оберіть форму</option>
                                     <option value="О">О</option>
                                     <option value="А">А</option>
@@ -311,14 +311,14 @@ const RecordModal: React.FC<RecordModalProps> = ({
                             </div>
                         )}
                          <div>
-                            <label htmlFor="units" className="block text-sm font-medium text-gray-700 mb-1">{activeMode === 'conclusions' ? 'Кількість (одиниці)' : 'Кількість сертифікатів *'}</label>
-                            <input type="number" name="units" value={formState.units} onChange={handleInputChange} className="input-field" required={activeMode === 'certificates'} />
+                            <label htmlFor="units" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">{activeMode === 'conclusions' ? 'Кількість (одиниці)' : 'Кількість сертифікатів *'}</label>
+                            <input type="number" name="units" value={formState.units} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" required={activeMode === 'certificates'} />
                         </div>
                         {activeMode === 'certificates' && (
                             <>
                                 <div>
-                                    <label htmlFor="certificateServiceType" className="block text-sm font-medium text-gray-700 mb-1">Тип послуги</label>
-                                    <select name="certificateServiceType" value={formState.certificateServiceType || 'standard'} onChange={handleInputChange} className="input-field">
+                                    <label htmlFor="certificateServiceType" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Тип послуги</label>
+                                    <select name="certificateServiceType" value={formState.certificateServiceType || 'standard'} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                         <option value="standard">Стандартний</option>
                                         <option value="replacement">Замінний</option>
                                         <option value="reissuance">Переоформлення</option>
@@ -328,19 +328,19 @@ const RecordModal: React.FC<RecordModalProps> = ({
                                 {isStandardCertificate && (
                                 <>
                                     <div>
-                                        <label htmlFor="productionType" className="block text-sm font-medium text-gray-700 mb-1">Тип виробництва *</label>
-                                        <select name="productionType" value={formState.productionType || 'fully_produced'} onChange={handleInputChange} required className="input-field">
+                                        <label htmlFor="productionType" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Тип виробництва *</label>
+                                        <select name="productionType" value={formState.productionType || 'fully_produced'} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                             <option value="fully_produced">Повністю вироблений в Україні</option>
                                             <option value="sufficient_processing">Достатня обробка/переробка</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label htmlFor="pages" className="block text-sm font-medium text-gray-700 mb-1">Кількість сторінок *</label>
-                                        <input type="number" name="pages" value={formState.pages || ''} onChange={handleInputChange} required className="input-field" />
+                                        <label htmlFor="pages" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Кількість сторінок *</label>
+                                        <input type="number" name="pages" value={formState.pages || ''} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                                     </div>
                                     <div>
-                                        <label htmlFor="additionalPages" className="block text-sm font-medium text-gray-700 mb-1">Кількість дод. аркушів</label>
-                                        <input type="number" name="additionalPages" value={formState.additionalPages || ''} onChange={handleInputChange} className="input-field" />
+                                        <label htmlFor="additionalPages" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Кількість дод. аркушів</label>
+                                        <input type="number" name="additionalPages" value={formState.additionalPages || ''} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                                     </div>
                                 </>
                                 )}
@@ -349,31 +349,31 @@ const RecordModal: React.FC<RecordModalProps> = ({
                         {activeMode === 'conclusions' && formState.conclusionType === 'standard' && (
                              <>
                                 <div>
-                                    <label htmlFor="models" className="block text-sm font-medium text-gray-700 mb-1">Кількість моделей *</label>
-                                    <input type="number" name="models" value={formState.models} onChange={handleInputChange} required className="input-field" />
+                                    <label htmlFor="models" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Кількість моделей *</label>
+                                    <input type="number" name="models" value={formState.models} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                                 </div>
                                 <div>
-                                    <label htmlFor="positions" className="block text-sm font-medium text-gray-700 mb-1">Кількість позицій *</label>
-                                    <input type="number" name="positions" value={formState.positions} onChange={handleInputChange} required className="input-field" />
+                                    <label htmlFor="positions" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Кількість позицій *</label>
+                                    <input type="number" name="positions" value={formState.positions} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                                 </div>
                             </>
                         )}
                         {activeMode === 'conclusions' && formState.conclusionType === 'contractual' && (
                             <div>
-                                <label htmlFor="pages" className="block text-sm font-medium text-gray-700 mb-1">Кількість сторінок *</label>
-                                <input type="number" name="pages" value={formState.pages || ''} onChange={handleInputChange} required className="input-field" />
+                                <label htmlFor="pages" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Кількість сторінок *</label>
+                                <input type="number" name="pages" value={formState.pages || ''} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                             </div>
                         )}
                         {(activeMode === 'certificates' && isStandardCertificate) && (
                         <div>
-                            <label htmlFor="positions" className="block text-sm font-medium text-gray-700 mb-1">Кількість додаткових позицій</label>
-                            <input type="number" name="positions" value={formState.positions} onChange={handleInputChange} className="input-field" />
+                            <label htmlFor="positions" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Кількість додаткових позицій</label>
+                            <input type="number" name="positions" value={formState.positions} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         )}
                          {activeMode === 'conclusions' && (
                             <div>
-                                <label htmlFor="codes" className="block text-sm font-medium text-gray-700 mb-1">Кількість кодів</label>
-                                <input type="number" name="codes" value={formState.codes} onChange={handleInputChange} className="input-field" />
+                                <label htmlFor="codes" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Кількість кодів</label>
+                                <input type="number" name="codes" value={formState.codes} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                             </div>
                         )}
                     </div>
@@ -389,16 +389,16 @@ const RecordModal: React.FC<RecordModalProps> = ({
                         {activeMode === 'conclusions' ? (
                             <>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Сума без знижки</label>
-                                    <input type="text" value={sumWithoutDiscount.toFixed(2)} readOnly className="input-field bg-gray-100" />
+                                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Сума без знижки</label>
+                                    <input type="text" value={sumWithoutDiscount.toFixed(2)} readOnly className="input-field bg-gray-100 dark:bg-gray-700 dark:text-white dark:border-gray-600" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Сума зі знижкою</label>
-                                    <input type="text" value={sumWithDiscount.toFixed(2)} readOnly className="input-field bg-gray-100" />
+                                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Сума зі знижкою</label>
+                                    <input type="text" value={sumWithDiscount.toFixed(2)} readOnly className="input-field bg-gray-100 dark:bg-gray-700 dark:text-white dark:border-gray-600" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Тип знижки</label>
-                                    <select name="discount" value={formState.discount} onChange={handleInputChange} className="input-field">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Тип знижки</label>
+                                    <select name="discount" value={formState.discount} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                         <option>Повна</option>
                                         <option>Зі знижкою</option>
                                     </select>
@@ -406,13 +406,13 @@ const RecordModal: React.FC<RecordModalProps> = ({
                             </>
                         ) : (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Сума</label>
-                                <input type="text" value={sumWithoutDiscount.toFixed(2)} readOnly className="input-field bg-gray-100" />
+                                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Сума</label>
+                                <input type="text" value={sumWithoutDiscount.toFixed(2)} readOnly className="input-field bg-gray-100 dark:bg-gray-700 dark:text-white dark:border-gray-600" />
                             </div>
                         )}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Статус</label>
-                             <select name="status" value={formState.status} onChange={handleInputChange} className="input-field">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Статус</label>
+                             <select name="status" value={formState.status} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                 <option value="Не виконано">Не виконано</option>
                                 <option value="Виконано">Виконано</option>
                             </select>
@@ -420,36 +420,36 @@ const RecordModal: React.FC<RecordModalProps> = ({
                     </div>
                     
                     <div>
-                         <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">Коментар</label>
-                         <textarea name="comment" value={formState.comment || ''} onChange={handleInputChange} rows={3} className="input-field"></textarea>
+                         <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Коментар</label>
+                         <textarea name="comment" value={formState.comment || ''} onChange={handleInputChange} rows={3} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
                     </div>
 
                     <div className="flex items-center space-x-6">
                         {activeMode === 'conclusions' && formState.conclusionType === 'standard' && (
                              <>
                                 <div className="flex items-center">
-                                    <input type="checkbox" id="complexity" name="complexity" checked={formState.complexity} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                                    <label htmlFor="complexity" className="ml-2 block text-sm text-gray-900">Складний</label>
+                                    <input type="checkbox" id="complexity" name="complexity" checked={formState.complexity} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
+                                    <label htmlFor="complexity" className="ml-2 block text-sm text-gray-900 dark:text-white">Складний</label>
                                 </div>
                                  <div className="flex items-center">
-                                    <input type="checkbox" id="urgency" name="urgency" checked={formState.urgency} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                                    <label htmlFor="urgency" className="ml-2 block text-sm text-gray-900">Терміновий</label>
+                                    <input type="checkbox" id="urgency" name="urgency" checked={formState.urgency} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
+                                    <label htmlFor="urgency" className="ml-2 block text-sm text-gray-900 dark:text-white">Терміновий</label>
                                 </div>
                             </>
                         )}
                          {activeMode === 'certificates' && (
                             <div className="flex items-center">
-                               <input type="checkbox" id="urgency" name="urgency" checked={formState.urgency} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                               <label htmlFor="urgency" className="ml-2 block text-sm text-gray-900">Терміновий</label>
+                               <input type="checkbox" id="urgency" name="urgency" checked={formState.urgency} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
+                               <label htmlFor="urgency" className="ml-2 block text-sm text-gray-900 dark:text-white">Терміновий</label>
                             </div>
                         )}
                     </div>
 
-                    <style>{`.input-field { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); outline: none; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; } .input-field:focus { border-color: #4F46E5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }`}</style>
+                    <style>{`.input-field { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); outline: none; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; } .input-field:focus { border-color: #4F46E5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); } .dark .input-field { background-color: #374151; border-color: #4B5563; color: #FFFFFF; } .dark .input-field:focus { border-color: #6366F1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }`}</style>
                 
                 </form>
-                 <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-                    <button onClick={onClose} type="button" className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                 <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl dark:border-gray-700 dark:bg-gray-700">
+                    <button onClick={onClose} type="button" className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 hover:dark:bg-gray-600">
                         Скасувати
                     </button>
                     <button onClick={handleSubmit} type="submit" className="ml-3 px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">

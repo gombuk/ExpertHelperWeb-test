@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { View, AppMode } from '../App';
+import { Theme } from '../types';
 
 const PlanIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
@@ -21,31 +22,42 @@ const SettingsIcon = () => (
     </svg>
 );
 
+const SunIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.325 6.325l-.707-.707M6.325 6.325l-.707-.707M18.325 6.325l-.707.707M6.325 18.325l-.707.707M12 18a6 6 0 100-12 6 6 0 000 12z" />
+    </svg>
+);
+
+const MoonIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+    </svg>
+);
+
 
 interface HeaderProps {
     setCurrentView: (view: View) => void;
     activeMode: AppMode;
     setActiveMode: (mode: AppMode) => void;
-    // Removed onOpenSheetsSync prop
-    // onOpenSheetsSync: () => void;
+    theme: Theme;
+    toggleTheme: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ setCurrentView, activeMode, setActiveMode }) => {
+const Header: React.FC<HeaderProps> = ({ setCurrentView, activeMode, setActiveMode, theme, toggleTheme }) => {
     
     const baseButtonClass = "px-4 py-2 text-sm font-semibold rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500";
-    // FIX: Renamed variable to use only ASCII characters to avoid potential issues with build tools.
-    const activeConclusionClass = activeMode === 'conclusions' ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300";
-    const activeSertifikatClass = activeMode === 'certificates' ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300";
+    const activeConclusionClass = activeMode === 'conclusions' ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-100 hover:dark:bg-gray-500";
+    const activeSertifikatClass = activeMode === 'certificates' ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-100 hover:dark:bg-gray-500";
 
     return (
         <header className="flex flex-col justify-between items-start">
             <div>
-                <h1 className="text-3xl font-bold text-gray-900">ExpertHelper Web</h1>
-                <p className="text-gray-500 mt-1">Управління експертними висновками та сертифікатами походження</p>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">ExpertHelper Web</h1>
+                <p className="text-gray-500 mt-1 dark:text-gray-400">Управління експертними висновками та сертифікатами походження</p>
             </div>
 
-            <div className="w-full flex flex-col md:flex-row justify-between items-center mt-6 border-t border-gray-200 pt-4">
-                <div className="flex items-center bg-gray-200 p-1 rounded-lg">
+            <div className="w-full flex flex-col md:flex-row justify-between items-center mt-6 border-t border-gray-200 pt-4 dark:border-gray-700">
+                <div className="flex items-center bg-gray-200 p-1 rounded-lg dark:bg-gray-700">
                     <button 
                         onClick={() => setActiveMode('conclusions')}
                         className={`${baseButtonClass} ${activeConclusionClass}`}
@@ -63,29 +75,29 @@ const Header: React.FC<HeaderProps> = ({ setCurrentView, activeMode, setActiveMo
                 <nav className="flex items-center flex-wrap gap-2 mt-4 md:mt-0">
                     <button 
                         onClick={() => setCurrentView('plan')}
-                        className="flex items-center px-4 py-2 text-sm font-medium text-purple-700 bg-purple-100 rounded-lg hover:bg-purple-200 transition-colors">
+                        className="flex items-center px-4 py-2 text-sm font-medium text-purple-700 bg-purple-100 rounded-lg hover:bg-purple-200 transition-colors dark:text-purple-200 dark:bg-purple-800 hover:dark:bg-purple-700">
                         <PlanIcon />
                         План
                     </button>
                     <button 
                         onClick={() => setCurrentView('firms')}
-                        className="flex items-center px-4 py-2 text-sm font-medium text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors">
+                        className="flex items-center px-4 py-2 text-sm font-medium text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors dark:text-orange-200 dark:bg-orange-800 hover:dark:bg-orange-700">
                         <FirmsIcon />
                         Фірми
                     </button>
                     <button 
                         onClick={() => setCurrentView('settings')}
-                        className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                        className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors dark:text-gray-100 dark:bg-gray-600 hover:dark:bg-gray-500">
                         <SettingsIcon />
                         Налаштування
                     </button>
-                     {/* Removed Google Sheets Sync Button */}
-                    {/* <button 
-                        onClick={onOpenSheetsSync}
-                        className="flex items-center px-4 py-2 text-sm font-medium text-green-700 bg-green-100 rounded-lg hover:bg-green-200 transition-colors">
-                        <GoogleSheetsIcon />
-                        Синхронізація з Sheets
-                    </button> */}
+                    <button
+                        onClick={toggleTheme}
+                        className="flex items-center p-2 rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300 transition-colors dark:text-gray-100 dark:bg-gray-600 hover:dark:bg-gray-500"
+                        title={theme === 'light' ? 'Увімкнути темний режим' : 'Увімкнути світлий режим'}
+                    >
+                        {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+                    </button>
                 </nav>
             </div>
         </header>
