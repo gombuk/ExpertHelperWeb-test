@@ -62,51 +62,24 @@ const UserManagement: React.FC<UserManagementProps> = ({ setCurrentView, showToa
 
     const handleSaveUser = async (user: Omit<User, 'id'> | User) => {
         const isEditing = 'id' in user;
-        const url = isEditing ? `/api/users/${user.id}` : '/api/users';
-        const method = isEditing ? 'PUT' : 'POST';
-
-        try {
-            const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(user),
-            });
-
-            if (response.ok) {
-                showToast(isEditing ? 'Користувача оновлено' : 'Користувача створено');
-                fetchUsers();
-                handleCloseModal();
-            } else {
-                const err = await response.json();
-                throw new Error(err.error || 'Failed to save user');
-            }
-        } catch (error) {
-            showToast(error instanceof Error ? error.message : 'Помилка збереження (демо-режим)', 'error');
-             // AI Studio fallback
-            if (isEditing) {
-                setUsers(users.map(u => (u.id === (user as User).id ? (user as User) : u)));
-            } else {
-                setUsers([...users, { ...user, id: Date.now() }]);
-            }
-            handleCloseModal();
+        
+        // AI Studio fallback logic
+        if (isEditing) {
+            setUsers(prevUsers => prevUsers.map(u => u.id === user.id ? user : u));
+            showToast('Користувача оновлено (демо-режим)');
+        } else {
+            const newUser = { ...user, id: Date.now() };
+            setUsers(prevUsers => [...prevUsers, newUser]);
+            showToast('Користувача створено (демо-режим)');
         }
+        handleCloseModal();
     };
 
     const handleDeleteUser = async (id: number) => {
         if (window.confirm('Ви впевнені, що хочете видалити цього користувача?')) {
-            try {
-                const response = await fetch(`/api/users/${id}`, { method: 'DELETE' });
-                if (response.ok) {
-                    showToast('Користувача видалено');
-                    fetchUsers();
-                } else {
-                    throw new Error('Failed to delete user');
-                }
-            } catch (error) {
-                showToast('Помилка видалення (демо-режим)', 'error');
-                // AI Studio fallback
-                setUsers(users.filter(u => u.id !== id));
-            }
+             // AI Studio fallback logic
+            setUsers(prevUsers => prevUsers.filter(u => u.id !== id));
+            showToast('Користувача видалено (демо-режим)');
         }
     };
 

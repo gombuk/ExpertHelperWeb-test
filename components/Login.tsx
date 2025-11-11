@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { CurrentUser } from '../types';
+import { CurrentUser, User } from '../types';
 
 interface LoginProps {
   onLoginSuccess: (user: CurrentUser) => void;
 }
+
+// Fallback users for AI Studio environment
+const fallbackUsers: User[] = [
+    { id: 1, login: 'admin', fullName: 'admin', password: 'Admin2025!', role: 'admin' },
+    { id: 2, login: 'Gomba', fullName: 'Гомба Ю.В.', password: 'Gomba2025!', role: 'user' },
+    { id: 3, login: 'Dan', fullName: 'Дан Т.О.', password: 'Dan2025!', role: 'user' },
+    { id: 4, login: 'Snietkov', fullName: 'Снєтков С.Ю.', password: 'Snietkov2025!', role: 'user' }
+];
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [login, setLogin] = useState('');
@@ -16,28 +24,16 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setError('');
     setIsLoading(true);
 
-    try {
-        const response = await fetch('/api/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ login, password }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-            onLoginSuccess(data.user);
+    // AI Studio Fallback Logic
+    setTimeout(() => {
+        const user = fallbackUsers.find(u => u.login === login && u.password === password);
+        if (user) {
+            onLoginSuccess({ login: user.login, fullName: user.fullName, role: user.role });
         } else {
-            setError(data.error || 'Неправильний логін або пароль');
+            setError('Неправильний логін або пароль');
         }
-    } catch (err) {
-        setError('Помилка підключення до сервера. Спробуйте пізніше.');
-        console.error('Login failed:', err);
-    } finally {
         setIsLoading(false);
-    }
+    }, 500); // Simulate network delay
   };
 
   return (
