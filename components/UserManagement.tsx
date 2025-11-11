@@ -1,10 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import type { User } from '../types';
 import type { View } from '../App';
 
 interface UserManagementProps {
     setCurrentView: (view: View) => void;
     showToast: (message: string, type?: 'success' | 'error') => void;
+    users: User[];
+    onAddUser: (user: Omit<User, 'id'>) => void;
+    onUpdateUser: (user: User) => void;
+    onDeleteUser: (userId: number) => void;
 }
 
 const BackArrowIcon = () => (
@@ -16,39 +20,16 @@ const BackArrowIcon = () => (
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 hover:text-blue-700" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" /></svg>;
 const DeleteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500 hover:text-red-700" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 
-const UserManagement: React.FC<UserManagementProps> = ({ setCurrentView, showToast }) => {
-    const [users, setUsers] = useState<User[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+const UserManagement: React.FC<UserManagementProps> = ({ 
+    setCurrentView, 
+    showToast,
+    users,
+    onAddUser,
+    onUpdateUser,
+    onDeleteUser
+}) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
-
-    const fetchUsers = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await fetch('/api/users');
-            if (response.ok) {
-                const data = await response.json();
-                setUsers(data);
-            } else {
-                throw new Error('Failed to fetch users');
-            }
-        } catch (error) {
-            showToast('Помилка завантаження користувачів. Використовуються демонстраційні дані.', 'error');
-            // Fallback for AI Studio
-            setUsers([
-              { id: 1, login: 'admin', fullName: 'Адміністратор', password: 'Admin2025!', role: 'admin' },
-              { id: 2, login: 'Gomba', fullName: 'Гомба Ю.В.', password: 'Gomba2025!', role: 'user' },
-              { id: 3, login: 'Dan', fullName: 'Дан Т.О.', password: 'Dan2025!', role: 'user' },
-              { id: 4, login: 'Snietkov', fullName: 'Снєтков С.Ю.', password: 'Snietkov2025!', role: 'user' }
-            ]);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [showToast]);
-
-    useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
 
     const handleOpenModal = (user: User | null = null) => {
         setEditingUser(user);
@@ -60,26 +41,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ setCurrentView, showToa
         setIsModalOpen(false);
     };
 
-    const handleSaveUser = async (user: Omit<User, 'id'> | User) => {
-        const isEditing = 'id' in user;
-        
-        // AI Studio fallback logic
-        if (isEditing) {
-            setUsers(prevUsers => prevUsers.map(u => u.id === user.id ? user : u));
-            showToast('Користувача оновлено');
+    const handleSaveUser = (user: Omit<User, 'id'> | User) => {
+        if ('id' in user) {
+            onUpdateUser(user);
         } else {
-            const newUser = { ...user, id: Date.now() };
-            setUsers(prevUsers => [...prevUsers, newUser]);
-            showToast('Користувача створено');
+            onAddUser(user);
         }
         handleCloseModal();
     };
 
-    const handleDeleteUser = async (id: number) => {
+    const handleDeleteUser = (id: number) => {
         if (window.confirm('Ви впевнені, що хочете видалити цього користувача?')) {
-             // AI Studio fallback logic
-            setUsers(prevUsers => prevUsers.filter(u => u.id !== id));
-            showToast('Користувача видалено');
+            onDeleteUser(id);
         }
     };
 
@@ -96,7 +69,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ setCurrentView, showToa
                 </button>
             </div>
 
-            {isLoading ? (
+            {users.length === 0 ? (
                 <p>Завантаження...</p>
             ) : (
                 <div className="overflow-x-auto">

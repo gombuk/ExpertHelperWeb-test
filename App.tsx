@@ -8,7 +8,7 @@ import PlanSettings from './components/PlanSettings';
 import Toast from './components/Toast';
 import Login from './components/Login';
 import UserManagement from './components/UserManagement';
-import { Record as AppRecord, CostModelRow, GeneralSettings, Firm, MonthlyPlan, CurrentUser } from './types';
+import { Record as AppRecord, CostModelRow, GeneralSettings, Firm, MonthlyPlan, CurrentUser, User } from './types';
 
 export type View = 'dashboard' | 'settings' | 'firms' | 'plan' | 'user_management';
 export type AppMode = 'conclusions' | 'certificates';
@@ -429,6 +429,7 @@ const App: React.FC = () => {
   
   const [selectedExpert, setSelectedExpert] = useState('all');
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
       setToast({ message, type });
@@ -447,6 +448,7 @@ const App: React.FC = () => {
   const handleLogout = () => {
     sessionStorage.removeItem('currentUser');
     setCurrentUser(null);
+    setUsers([]); // Clear user list on logout
   };
 
   // --- Data Persistence Logic ---
@@ -504,6 +506,51 @@ const App: React.FC = () => {
       saveDataToServer();
 
   }, [appData, isDataLoaded]);
+
+  // --- User Management Logic ---
+  const fetchUsers = useCallback(async () => {
+    try {
+        const response = await fetch('/api/users');
+        if (response.ok) {
+            const data = await response.json();
+            setUsers(data);
+        } else {
+            throw new Error('Failed to fetch users');
+        }
+    } catch (error) {
+        showToast('Помилка завантаження користувачів. Використовуються демонстраційні дані.', 'error');
+        // Fallback for AI Studio
+        setUsers([
+          { id: 1, login: 'admin', fullName: 'Адміністратор', password: 'Admin2025!', role: 'admin' },
+          { id: 2, login: 'Gomba', fullName: 'Гомба Ю.В.', password: 'Gomba2025!', role: 'user' },
+          { id: 3, login: 'Dan', fullName: 'Дан Т.О.', password: 'Dan2025!', role: 'user' },
+          { id: 4, login: 'Snietkov', fullName: 'Снєтков С.Ю.', password: 'Snietkov2025!', role: 'user' }
+        ]);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    if (currentUser?.role === 'admin') {
+      fetchUsers();
+    }
+  }, [currentUser, fetchUsers]);
+
+
+  const handleAddUser = (newUser: Omit<User, 'id'>) => {
+    const userWithId = { ...newUser, id: Date.now() }; // Simple ID for demo mode
+    setUsers(prev => [...prev, userWithId]);
+    showToast('Користувача створено');
+  };
+
+  const handleUpdateUser = (updatedUser: User) => {
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    showToast('Користувача оновлено');
+  };
+  
+  const handleDeleteUser = (userId: number) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    showToast('Користувача видалено');
+  };
 
   // --- User Activity Logic ---
   useEffect(() => {
@@ -790,7 +837,14 @@ const App: React.FC = () => {
       case 'plan':
         return <PlanSettings setCurrentView={setCurrentView} monthlyPlans={currentModeData.monthlyPlans} setMonthlyPlans={setMonthlyPlans} showToast={showToast} />;
       case 'user_management':
-        return <UserManagement setCurrentView={setCurrentView} showToast={showToast} />;
+        return <UserManagement 
+                    setCurrentView={setCurrentView} 
+                    showToast={showToast} 
+                    users={users}
+                    onAddUser={handleAddUser}
+                    onUpdateUser={handleUpdateUser}
+                    onDeleteUser={handleDeleteUser}
+                />;
       case 'dashboard':
       default:
         return (
