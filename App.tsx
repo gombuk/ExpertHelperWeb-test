@@ -844,7 +844,7 @@ const App: React.FC = () => {
   return (
     <div className="bg-gray-100 min-h-screen p-4 sm:p-6 lg:p-8 dark:bg-gray-900">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-screen-2xl mx-auto">
             <Header 
               setCurrentView={setCurrentView}
               activeMode={activeMode}
