@@ -407,7 +407,7 @@ const initialAppData: AppData = {
   }
 };
 
-const API_URL = 'http://localhost:3001/api/data';
+const API_URL = '/api/data';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
