@@ -79,3 +79,17 @@ export interface MonthlyPlan {
 }
 
 export type Theme = 'light' | 'dark';
+
+export interface User {
+  id: number;
+  login: string;
+  fullName: string;
+  password?: string; // Password is plain text as requested
+  role: 'admin' | 'user';
+}
+
+export interface CurrentUser {
+  login: string;
+  fullName: string;
+  role: 'admin' | 'user';
+}

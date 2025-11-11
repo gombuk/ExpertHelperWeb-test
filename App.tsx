@@ -6,9 +6,11 @@ import Settings from './components/Settings';
 import Firms from './components/Firms';
 import PlanSettings from './components/PlanSettings';
 import Toast from './components/Toast';
-import { Record as AppRecord, CostModelRow, GeneralSettings, Firm, MonthlyPlan } from './types';
+import Login from './components/Login';
+import UserManagement from './components/UserManagement';
+import { Record as AppRecord, CostModelRow, GeneralSettings, Firm, MonthlyPlan, CurrentUser } from './types';
 
-export type View = 'dashboard' | 'settings' | 'firms' | 'plan';
+export type View = 'dashboard' | 'settings' | 'firms' | 'plan' | 'user_management';
 export type AppMode = 'conclusions' | 'certificates';
 export type Theme = 'light' | 'dark';
 
@@ -410,12 +412,23 @@ const initialAppData: AppData = {
 const API_URL = '/api/data';
 
 const App: React.FC = () => {
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => {
+    const savedUser = sessionStorage.getItem('currentUser');
+    try {
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (error) {
+      return null;
+    }
+  });
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [activeMode, setActiveMode] = useState<AppMode>('conclusions');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [appData, setAppData] = useState<AppData>(initialAppData);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  
+  const [selectedExpert, setSelectedExpert] = useState('all');
+  const [activeUsers, setActiveUsers] = useState<string[]>([]);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
       setToast({ message, type });
@@ -424,21 +437,28 @@ const App: React.FC = () => {
       }, 3000);
   }, []);
 
-  // --- Data Persistence Logic ---
+  // --- Authentication Logic ---
+  const handleLoginSuccess = (user: CurrentUser) => {
+    sessionStorage.setItem('currentUser', JSON.stringify(user));
+    setCurrentUser(user);
+    setCurrentView('dashboard');
+  };
 
-  // 1. Load data on startup
+  const handleLogout = () => {
+    sessionStorage.removeItem('currentUser');
+    setCurrentUser(null);
+  };
+
+  // --- Data Persistence Logic ---
   useEffect(() => {
       const loadData = async () => {
           try {
-              // Try fetching from server first
               const response = await fetch(API_URL);
               if (response.ok) {
                   const serverData = await response.json();
                   if (serverData && Object.keys(serverData).length > 0) {
                       setAppData(serverData);
-                      console.log('Data loaded from server');
                   } else {
-                       // Server empty, try local storage fallback
                        loadFromLocalStorage();
                   }
               } else {
@@ -457,7 +477,6 @@ const App: React.FC = () => {
            if (savedData) {
                try {
                    setAppData(JSON.parse(savedData));
-                   console.log('Data loaded from localStorage');
                } catch (e) {
                    console.error('Failed to parse localStorage data', e);
                }
@@ -467,14 +486,10 @@ const App: React.FC = () => {
       loadData();
   }, []);
 
-  // 2. Save data on change
   useEffect(() => {
-      if (!isDataLoaded) return; // Don't save before initial load is complete
-
-      // Save to localStorage (always as backup)
+      if (!isDataLoaded) return;
       localStorage.setItem('appData', JSON.stringify(appData));
 
-      // Try saving to server
       const saveDataToServer = async () => {
           try {
               await fetch(API_URL, {
@@ -483,16 +498,59 @@ const App: React.FC = () => {
                   body: JSON.stringify(appData),
               });
           } catch (error) {
-               // Silent fail for server save if offline, already saved to localStorage
-               // console.warn('Failed to save to server', error);
+              // Silent fail
           }
       };
       saveDataToServer();
 
   }, [appData, isDataLoaded]);
 
-  // --- Import / Export Logic ---
+  // --- User Activity Logic ---
+  useEffect(() => {
+      if (!currentUser) {
+          setActiveUsers([]);
+          return;
+      }
 
+      const heartbeatInterval = setInterval(async () => {
+          try {
+              await fetch('/api/activity/heartbeat', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ login: currentUser.login, fullName: currentUser.fullName }),
+              });
+          } catch (error) {
+              // Fails silently in AI Studio or other non-server environments
+          }
+      }, 30000); // Send heartbeat every 30 seconds
+
+      const fetchActiveUsers = async () => {
+          try {
+              const response = await fetch('/api/activity/active-users');
+              if (response.ok) {
+                  const users = await response.json();
+                  setActiveUsers(users);
+              } else {
+                  // This will trigger the catch block in environments without a server
+                  throw new Error('Server responded with non-OK status');
+              }
+          } catch (error) {
+              // Fallback for AI Studio: if the fetch fails, use mock data.
+              console.warn("Could not fetch active users, using mock data for demonstration.");
+              setActiveUsers(['Дан Т.О.', 'admin', 'Снєтков С.Ю.', 'Гомба Ю.В.']);
+          }
+      };
+
+      fetchActiveUsers(); // Initial fetch
+      const fetchInterval = setInterval(fetchActiveUsers, 15000); // Re-fetch every 15 seconds
+
+      return () => {
+          clearInterval(heartbeatInterval);
+          clearInterval(fetchInterval);
+      };
+  }, [currentUser]);
+
+  // --- Import / Export Logic ---
   const importRecords = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -532,23 +590,18 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
     showToast('Експорт успішний.');
   }, [appData, activeMode, showToast]);
-
-
-  
-  const [selectedExpert, setSelectedExpert] = useState('all');
   
   // Initialize selectedMonth based on data
   const initialSelectedMonth = useMemo(() => {
     const allMonths = new Set<string>();
     Object.keys(initialAppData.conclusions.monthlyPlans).forEach(month => allMonths.add(month));
     Object.keys(initialAppData.certificates.monthlyPlans).forEach(month => allMonths.add(month));
-    const sortedMonths = Array.from(allMonths).sort((a, b) => b.localeCompare(a)); // Descending order
+    const sortedMonths = Array.from(allMonths).sort((a, b) => b.localeCompare(a));
     return sortedMonths.length > 0 ? sortedMonths[0] : new Date().toISOString().slice(0, 7);
   }, []);
 
   const [selectedMonth, setSelectedMonth] = useState(initialSelectedMonth);
 
-  // Dark mode state and logic
   const [theme, setTheme] = useState<Theme>(() => {
     const savedTheme = localStorage.getItem('theme');
     return (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'light';
@@ -567,9 +620,7 @@ const App: React.FC = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-
   useEffect(() => {
-    // Update selectedMonth if initial data changes or if the current selectedMonth is no longer valid
     const allMonths = new Set<string>();
     Object.keys(appData.conclusions.monthlyPlans).forEach(month => allMonths.add(month));
     Object.keys(appData.certificates.monthlyPlans).forEach(month => allMonths.add(month));
@@ -581,7 +632,6 @@ const App: React.FC = () => {
       setSelectedMonth(new Date().toISOString().slice(0, 7));
     }
   }, [appData, selectedMonth]);
-
 
   const currentModeData = useMemo(() => {
     return appData[activeMode];
@@ -596,8 +646,6 @@ const App: React.FC = () => {
         records: [recordWithId, ...prevData[activeMode].records],
       },
     }));
-    const recordType = activeMode === 'conclusions' ? 'Експертний висновок' : 'Сертифікат';
-    showToast(`${recordType} №${newRecord.registrationNumber} для ${newRecord.companyName} зареєстрований.`);
   };
   
   const updateRecord = (updatedRecord: AppRecord) => {
@@ -610,7 +658,6 @@ const App: React.FC = () => {
         ),
       },
     }));
-    showToast('Запис оновлено успішно!');
   };
   
   const deleteRecord = (id: number) => {
@@ -621,7 +668,6 @@ const App: React.FC = () => {
         records: prevData[activeMode].records.filter(record => record.id !== id),
       },
     }));
-    showToast('Запис видалено успішно!');
   };
 
   const setCostModelTable = (newTable: CostModelRow[]) => {
@@ -632,7 +678,6 @@ const App: React.FC = () => {
         costModelTable: newTable,
       },
     }));
-    showToast('Таблицю вартості оновлено.');
   };
 
   const setGeneralSettings = (newSettings: GeneralSettings) => {
@@ -643,7 +688,6 @@ const App: React.FC = () => {
         generalSettings: newSettings,
       },
     }));
-    showToast('Загальні налаштування оновлено.');
   };
   
   const setMonthlyPlans = (newPlans: Record<string, MonthlyPlan>) => {
@@ -654,7 +698,6 @@ const App: React.FC = () => {
         monthlyPlans: newPlans,
       },
     }));
-    showToast('Місячні плани оновлено.');
   };
 
   const addFirm = (newFirm: Omit<Firm, 'id'>) => {
@@ -666,7 +709,6 @@ const App: React.FC = () => {
         firms: [firmWithId, ...prevData[activeMode].firms],
       },
     }));
-    showToast('Фірму додано успішно!');
   };
   
   const updateFirm = (updatedFirm: Firm) => {
@@ -679,7 +721,6 @@ const App: React.FC = () => {
         ),
       },
     }));
-    showToast('Фірму оновлено успішно!');
   };
 
   const deleteFirm = (id: number) => {
@@ -690,38 +731,20 @@ const App: React.FC = () => {
         firms: prevData[activeMode].firms.filter(firm => firm.id !== id),
       },
     }));
-    showToast('Фірму видалено успішно!');
   };
 
   const copyFirmToOtherMode = (firmToCopy: Firm) => {
-    const sourceMode = activeMode;
-    const targetMode = sourceMode === 'conclusions' ? 'certificates' : 'conclusions';
+    const targetMode = activeMode === 'conclusions' ? 'certificates' : 'conclusions';
     const targetModeName = targetMode === 'conclusions' ? 'Висновки' : 'Сертифікати';
-
     const targetFirms = appData[targetMode].firms;
-    const firmExists = targetFirms.some(f => f.name.toLowerCase() === firmToCopy.name.toLowerCase());
-
-    if (firmExists) {
+    if (targetFirms.some(f => f.name.toLowerCase() === firmToCopy.name.toLowerCase())) {
         showToast(`Фірму "${firmToCopy.name}" вже існує у списку "${targetModeName}".`, 'error');
         return;
     }
-
-    const newFirm: Omit<Firm, 'id'> = {
-        name: firmToCopy.name,
-        address: firmToCopy.address,
-        directorName: firmToCopy.directorName,
-        edrpou: firmToCopy.edrpou,
-        taxNumber: firmToCopy.taxNumber,
-        productName: firmToCopy.productName,
-    };
-    
-    const firmWithId = { ...newFirm, id: Date.now() };
+    const firmWithId = { ...firmToCopy, id: Date.now() };
     setAppData(prevData => ({
       ...prevData,
-      [targetMode]: {
-        ...prevData[targetMode],
-        firms: [firmWithId, ...prevData[targetMode].firms],
-      },
+      [targetMode]: { ...prevData[targetMode], firms: [firmWithId, ...prevData[targetMode].firms] },
     }));
     showToast(`Фірму "${firmToCopy.name}" скопійовано до списку "${targetModeName}".`);
   };
@@ -738,34 +761,20 @@ const App: React.FC = () => {
       const expertMatch = selectedExpert === 'all' || record.expert === selectedExpert;
       const recordMonth = record.endDate.substring(0, 7);
       const dateMatch = recordMonth === selectedMonth;
-      
       return expertMatch && dateMatch;
     });
   }, [currentModeData.records, selectedExpert, selectedMonth]);
 
   const lastRegistrationNumber = useMemo(() => {
-    if (currentModeData.records.length === 0) {
-        return 'N/A';
-    }
-
+    if (currentModeData.records.length === 0) return 'N/A';
     const getNumericPart = (regNum: string) => {
         const match = regNum.match(/(\d+)/);
         return match ? parseInt(match[1], 10) : 0;
     };
-
-    let latestRecord = currentModeData.records[0];
-    let maxNumericPart = getNumericPart(latestRecord.registrationNumber);
-
-    for (let i = 1; i < currentModeData.records.length; i++) {
-        const currentRecord = currentModeData.records[i];
-        const currentNumericPart = getNumericPart(currentRecord.registrationNumber);
-        if (currentNumericPart > maxNumericPart) {
-            maxNumericPart = currentNumericPart;
-            latestRecord = currentRecord;
-        }
-    }
-    return latestRecord.registrationNumber;
-}, [currentModeData.records]);
+    return currentModeData.records.reduce((latest, current) => 
+        getNumericPart(current.registrationNumber) > getNumericPart(latest.registrationNumber) ? current : latest
+    ).registrationNumber;
+  }, [currentModeData.records]);
   
   const currentMonthlyPlan = useMemo(() => {
     return currentModeData.monthlyPlans[selectedMonth] || { totalPlan: 0, expertPlans: [] };
@@ -775,83 +784,35 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch(currentView) {
       case 'settings':
-        return <Settings 
-          setCurrentView={setCurrentView} 
-          generalSettings={currentModeData.generalSettings}
-          setGeneralSettings={setGeneralSettings}
-          costModelTable={currentModeData.costModelTable}
-          setCostModelTable={setCostModelTable}
-          showToast={showToast}
-          activeMode={activeMode}
-        />;
+        return <Settings setCurrentView={setCurrentView} generalSettings={currentModeData.generalSettings} setGeneralSettings={setGeneralSettings} costModelTable={currentModeData.costModelTable} setCostModelTable={setCostModelTable} showToast={showToast} activeMode={activeMode} />;
       case 'firms':
-        return <Firms 
-          setCurrentView={setCurrentView}
-          firms={currentModeData.firms}
-          onAddFirm={addFirm}
-          onUpdateFirm={updateFirm}
-          onDeleteFirm={deleteFirm}
-          onCopyFirm={copyFirmToOtherMode}
-          activeMode={activeMode}
-          showToast={showToast}
-        />;
+        return <Firms setCurrentView={setCurrentView} firms={currentModeData.firms} onAddFirm={addFirm} onUpdateFirm={updateFirm} onDeleteFirm={deleteFirm} onCopyFirm={copyFirmToOtherMode} activeMode={activeMode} showToast={showToast} />;
       case 'plan':
-        return <PlanSettings
-          setCurrentView={setCurrentView}
-          monthlyPlans={currentModeData.monthlyPlans}
-          setMonthlyPlans={setMonthlyPlans}
-          showToast={showToast}
-        />;
+        return <PlanSettings setCurrentView={setCurrentView} monthlyPlans={currentModeData.monthlyPlans} setMonthlyPlans={setMonthlyPlans} showToast={showToast} />;
+      case 'user_management':
+        return <UserManagement setCurrentView={setCurrentView} showToast={showToast} />;
       case 'dashboard':
       default:
         return (
           <>
-            <Statistics 
-              records={filteredRecords}
-              costModelTable={currentModeData.costModelTable}
-              generalSettings={currentModeData.generalSettings}
-              experts={allExpertsForMode}
-              selectedExpert={selectedExpert}
-              setSelectedExpert={setSelectedExpert}
-              selectedMonth={selectedMonth}
-              setSelectedMonth={setSelectedMonth}
-              monthlyPlan={currentMonthlyPlan}
-              activeMode={activeMode}
-              lastRegistrationNumber={lastRegistrationNumber}
-            />
+            <Statistics records={filteredRecords} costModelTable={currentModeData.costModelTable} generalSettings={currentModeData.generalSettings} experts={allExpertsForMode} selectedExpert={selectedExpert} setSelectedExpert={setSelectedExpert} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} monthlyPlan={currentMonthlyPlan} activeMode={activeMode} lastRegistrationNumber={lastRegistrationNumber} currentUser={currentUser} />
             <div className="mt-8">
-              <RecordsTable 
-                records={filteredRecords}
-                onAddRecord={addRecord}
-                onUpdateRecord={updateRecord}
-                onDeleteRecord={deleteRecord}
-                firms={currentModeData.firms}
-                experts={allExpertsForMode}
-                costModelTable={currentModeData.costModelTable}
-                generalSettings={currentModeData.generalSettings}
-                showToast={showToast}
-                activeMode={activeMode}
-                selectedMonth={selectedMonth}
-                onImportRecords={importRecords}
-                onExportRecords={exportRecords}
-              />
+              <RecordsTable records={filteredRecords} onAddRecord={addRecord} onUpdateRecord={updateRecord} onDeleteRecord={deleteRecord} firms={currentModeData.firms} experts={allExpertsForMode} costModelTable={currentModeData.costModelTable} generalSettings={currentModeData.generalSettings} showToast={showToast} activeMode={activeMode} selectedMonth={selectedMonth} onImportRecords={importRecords} onExportRecords={exportRecords} />
             </div>
           </>
         );
     }
   };
 
+  if (!currentUser) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="bg-gray-100 min-h-screen p-4 sm:p-6 lg:p-8 dark:bg-gray-900">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         <div className="max-w-screen-2xl mx-auto">
-            <Header 
-              setCurrentView={setCurrentView}
-              activeMode={activeMode}
-              setActiveMode={setActiveMode}
-              theme={theme}
-              toggleTheme={toggleTheme}
-            />
+            <Header setCurrentView={setCurrentView} activeMode={activeMode} setActiveMode={setActiveMode} theme={theme} toggleTheme={toggleTheme} currentUser={currentUser} onLogout={handleLogout} activeUsers={activeUsers} />
             <main className="mt-8">
                 {renderContent()}
             </main>

@@ -1,8 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import StatCard from './StatCard';
-// FIX: Aliased Record to AppRecord to avoid conflict with the built-in Record type.
-import type { Record as AppRecord, CostModelRow, GeneralSettings, MonthlyPlan } from '../types';
+import type { Record as AppRecord, CostModelRow, GeneralSettings, MonthlyPlan, CurrentUser } from '../types';
 import { calculateCost } from '../utils/calculateCost';
 import type { AppMode } from '../App';
 
@@ -23,7 +21,8 @@ interface StatisticsProps {
     setSelectedMonth: (month: string) => void;
     monthlyPlan: MonthlyPlan;
     activeMode: AppMode;
-    lastRegistrationNumber: string; // New prop for last registration number
+    lastRegistrationNumber: string;
+    currentUser: CurrentUser | null;
 }
 
 
@@ -42,7 +41,8 @@ const Statistics: React.FC<StatisticsProps> = ({
     setSelectedMonth,
     monthlyPlan,
     activeMode,
-    lastRegistrationNumber // Destructure new prop
+    lastRegistrationNumber,
+    currentUser
 }) => {
     const [totalWithoutDiscount, setTotalWithoutDiscount] = useState(0);
     const [totalWithDiscount, setTotalWithDiscount] = useState(0);
@@ -110,7 +110,12 @@ const Statistics: React.FC<StatisticsProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
                     <label htmlFor="expert" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Експерт</label>
-                    <select id="expert" value={selectedExpert} onChange={(e) => setSelectedExpert(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <select 
+                        id="expert" 
+                        value={selectedExpert} 
+                        onChange={(e) => setSelectedExpert(e.target.value)} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:disabled:bg-gray-600"
+                    >
                         <option value="all">Всі експерти</option>
                         {experts.map(expert => <option key={expert} value={expert}>{expert}</option>)}
                     </select>
