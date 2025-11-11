@@ -447,8 +447,9 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     sessionStorage.removeItem('currentUser');
+    sessionStorage.removeItem('users'); // Clear users cache on logout
     setCurrentUser(null);
-    setUsers([]); // Clear user list on logout
+    setUsers([]); 
   };
 
   // --- Data Persistence Logic ---
@@ -514,18 +515,25 @@ const App: React.FC = () => {
         if (response.ok) {
             const data = await response.json();
             setUsers(data);
+            sessionStorage.setItem('users', JSON.stringify(data));
         } else {
             throw new Error('Failed to fetch users');
         }
     } catch (error) {
         showToast('Помилка завантаження користувачів. Використовуються демонстраційні дані.', 'error');
-        // Fallback for AI Studio
-        setUsers([
-          { id: 1, login: 'admin', fullName: 'Адміністратор', password: 'Admin2025!', role: 'admin' },
-          { id: 2, login: 'Gomba', fullName: 'Гомба Ю.В.', password: 'Gomba2025!', role: 'user' },
-          { id: 3, login: 'Dan', fullName: 'Дан Т.О.', password: 'Dan2025!', role: 'user' },
-          { id: 4, login: 'Snietkov', fullName: 'Снєтков С.Ю.', password: 'Snietkov2025!', role: 'user' }
-        ]);
+        const savedUsers = sessionStorage.getItem('users');
+        if (savedUsers) {
+            setUsers(JSON.parse(savedUsers));
+        } else {
+            const fallbackUsers = [
+                { id: 1, login: 'admin', fullName: 'Адміністратор', password: 'Admin2025!', role: 'admin' },
+                { id: 2, login: 'Gomba', fullName: 'Гомба Ю.В.', password: 'Gomba2025!', role: 'user' },
+                { id: 3, login: 'Dan', fullName: 'Дан Т.О.', password: 'Dan2025!', role: 'user' },
+                { id: 4, login: 'Snietkov', fullName: 'Снєтков С.Ю.', password: 'Snietkov2025!', role: 'user' }
+            ];
+            setUsers(fallbackUsers);
+            sessionStorage.setItem('users', JSON.stringify(fallbackUsers));
+        }
     }
   }, [showToast]);
 
@@ -536,20 +544,66 @@ const App: React.FC = () => {
   }, [currentUser, fetchUsers]);
 
 
-  const handleAddUser = (newUser: Omit<User, 'id'>) => {
-    const userWithId = { ...newUser, id: Date.now() }; // Simple ID for demo mode
-    setUsers(prev => [...prev, userWithId]);
-    showToast('Користувача створено');
+  const handleAddUser = async (newUser: Omit<User, 'id'>) => {
+    try {
+        const response = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newUser),
+        });
+        if (!response.ok) throw new Error('Server error');
+        const addedUser = await response.json();
+        const updatedUsers = [...users, addedUser];
+        setUsers(updatedUsers);
+        sessionStorage.setItem('users', JSON.stringify(updatedUsers));
+        showToast('Користувача створено');
+    } catch (error) {
+        // Fallback for AI Studio
+        const userWithId = { ...newUser, id: Date.now() };
+        const updatedUsers = [...users, userWithId];
+        setUsers(updatedUsers);
+        sessionStorage.setItem('users', JSON.stringify(updatedUsers));
+        showToast('Користувача створено');
+    }
   };
 
-  const handleUpdateUser = (updatedUser: User) => {
-    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    showToast('Користувача оновлено');
+  const handleUpdateUser = async (updatedUser: User) => {
+    try {
+        const response = await fetch(`/api/users/${updatedUser.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedUser),
+        });
+        if (!response.ok) throw new Error('Server error');
+        const returnedUser = await response.json();
+        const updatedUsers = users.map(u => u.id === returnedUser.id ? returnedUser : u);
+        setUsers(updatedUsers);
+        sessionStorage.setItem('users', JSON.stringify(updatedUsers));
+        showToast('Користувача оновлено');
+    } catch (error) {
+        // Fallback for AI Studio
+        const updatedUsers = users.map(u => u.id === updatedUser.id ? updatedUser : u);
+        setUsers(updatedUsers);
+        sessionStorage.setItem('users', JSON.stringify(updatedUsers));
+        showToast('Користувача оновлено');
+    }
   };
   
-  const handleDeleteUser = (userId: number) => {
-    setUsers(prev => prev.filter(u => u.id !== userId));
-    showToast('Користувача видалено');
+  const handleDeleteUser = async (userId: number) => {
+    try {
+        const response = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Server error');
+        const updatedUsers = users.filter(u => u.id !== userId);
+        setUsers(updatedUsers);
+        sessionStorage.setItem('users', JSON.stringify(updatedUsers));
+        showToast('Користувача видалено');
+    } catch (error) {
+        // Fallback for AI Studio
+        const updatedUsers = users.filter(u => u.id !== userId);
+        setUsers(updatedUsers);
+        sessionStorage.setItem('users', JSON.stringify(updatedUsers));
+        showToast('Користувача видалено');
+    }
   };
 
   // --- User Activity Logic ---
@@ -859,7 +913,7 @@ const App: React.FC = () => {
   };
 
   if (!currentUser) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+    return <Login onLoginSuccess={handleLoginSuccess} users={users} />;
   }
 
   return (
