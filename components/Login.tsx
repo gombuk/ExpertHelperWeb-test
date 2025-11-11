@@ -7,7 +7,7 @@ interface LoginProps {
 
 // Fallback users for AI Studio environment
 const fallbackUsers: User[] = [
-    { id: 1, login: 'admin', fullName: 'admin', password: 'Admin2025!', role: 'admin' },
+    { id: 1, login: 'admin', fullName: 'Адміністратор', password: 'Admin2025!', role: 'admin' },
     { id: 2, login: 'Gomba', fullName: 'Гомба Ю.В.', password: 'Gomba2025!', role: 'user' },
     { id: 3, login: 'Dan', fullName: 'Дан Т.О.', password: 'Dan2025!', role: 'user' },
     { id: 4, login: 'Snietkov', fullName: 'Снєтков С.Ю.', password: 'Snietkov2025!', role: 'user' }

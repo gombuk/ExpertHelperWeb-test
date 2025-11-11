@@ -74,7 +74,7 @@ const Header: React.FC<HeaderProps> = ({ setCurrentView, activeMode, setActiveMo
                     <div className="flex flex-col items-end gap-2">
                         <div className="flex items-center gap-4">
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                                Вітаємо, <span className="font-bold">{currentUser.fullName}</span>!
+                                Вітаємо, <span className="font-bold">{currentUser.fullName || currentUser.login}</span>!
                             </span>
                             <button
                                 onClick={onLogout}

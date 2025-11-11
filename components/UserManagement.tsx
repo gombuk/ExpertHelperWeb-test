@@ -36,7 +36,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ setCurrentView, showToa
             showToast('Помилка завантаження користувачів. Використовуються демонстраційні дані.', 'error');
             // Fallback for AI Studio
             setUsers([
-              { id: 1, login: 'admin', fullName: 'admin', password: 'Admin2025!', role: 'admin' },
+              { id: 1, login: 'admin', fullName: 'Адміністратор', password: 'Admin2025!', role: 'admin' },
               { id: 2, login: 'Gomba', fullName: 'Гомба Ю.В.', password: 'Gomba2025!', role: 'user' },
               { id: 3, login: 'Dan', fullName: 'Дан Т.О.', password: 'Dan2025!', role: 'user' },
               { id: 4, login: 'Snietkov', fullName: 'Снєтков С.Ю.', password: 'Snietkov2025!', role: 'user' }
@@ -66,11 +66,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ setCurrentView, showToa
         // AI Studio fallback logic
         if (isEditing) {
             setUsers(prevUsers => prevUsers.map(u => u.id === user.id ? user : u));
-            showToast('Користувача оновлено (демо-режим)');
+            showToast('Користувача оновлено');
         } else {
             const newUser = { ...user, id: Date.now() };
             setUsers(prevUsers => [...prevUsers, newUser]);
-            showToast('Користувача створено (демо-режим)');
+            showToast('Користувача створено');
         }
         handleCloseModal();
     };
@@ -79,7 +79,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ setCurrentView, showToa
         if (window.confirm('Ви впевнені, що хочете видалити цього користувача?')) {
              // AI Studio fallback logic
             setUsers(prevUsers => prevUsers.filter(u => u.id !== id));
-            showToast('Користувача видалено (демо-режим)');
+            showToast('Користувача видалено');
         }
     };
 
