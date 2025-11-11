@@ -1,4 +1,3 @@
-
 // FIX: Aliased Record to AppRecord to avoid conflict with the built-in Record type.
 import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings } from '../types';
 import { calculateCost } from './calculateCost'; // Import the calculateCost function
@@ -1332,15 +1331,12 @@ export const generateMonthlyReportHtml = (
         Object.keys(expertData.firms).sort().forEach(firmName => {
             const firmData = expertData.firms[firmName];
             
-            // Determine if the firm has only one record
             const isSingleRecordFirm = firmData.records.length === 1;
+            const firmRowspan = firmData.records.length;
 
             firmData.records.forEach((record, recordIndex) => {
                 const numericRegNumber = record.registrationNumber.match(/(\d+)/)?.[1] || record.registrationNumber;
                 
-                // Calculate rowspan for the firm name cell
-                const firmRowspan = isSingleRecordFirm ? 1 : firmData.records.length + 1; // +1 for the firm total row if present
-
                 tableRowsHtml += `
                     <tr>
                         ${recordIndex === 0 ? `<td rowspan="${firmRowspan}" class="firm-name">${firmName}</td>` : ''}
@@ -1356,10 +1352,11 @@ export const generateMonthlyReportHtml = (
             if (!isSingleRecordFirm) {
                 tableRowsHtml += `
                     <tr class="firm-total">
-                        <td colspan="2"></td> <!-- Covers "Замовник" and "№ наряду" -->
-                        <td class="total-units-firm">${isConclusions ? firmData.totalRecordsCount : firmData.totalUnits}</td> <!-- "Кількість" -->
-                        <td></td> <!-- "Дата видачі" (empty) -->
-                        <td class="total-sum-firm">${formatCurrencyForReport(firmData.totalSum)}</td> <!-- "Сума, грн" -->
+                        <td></td>
+                        <td></td>
+                        <td class="total-units-firm">${isConclusions ? firmData.totalRecordsCount : firmData.totalUnits}</td>
+                        <td></td>
+                        <td class="total-sum-firm">${formatCurrencyForReport(firmData.totalSum)}</td>
                     </tr>
                 `;
             } 
