@@ -78,7 +78,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-200">Логін</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-200">ПІБ</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-200">E-mail</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-200">Пароль</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-200">Роль</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-200">Дії</th>
@@ -89,7 +88,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
                                 <tr key={user.id}>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{user.login}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.fullName}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.email || '-'}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.password}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.role}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -121,11 +119,10 @@ const UserModal: React.FC<UserModalProps> = ({ user, onSave, onClose }) => {
     const [fullName, setFullName] = useState(user?.fullName || '');
     const [password, setPassword] = useState(user?.password || '');
     const [role, setRole] = useState<'admin' | 'user'>(user?.role || 'user');
-    const [email, setEmail] = useState(user?.email || '');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const userData = { login, fullName, password, role, email };
+        const userData = { login, fullName, password, role };
         if (user) {
             onSave({ ...userData, id: user.id });
         } else {
@@ -146,10 +143,6 @@ const UserModal: React.FC<UserModalProps> = ({ user, onSave, onClose }) => {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">ПІБ</label>
                             <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">E-mail</label>
-                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Пароль</label>

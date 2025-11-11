@@ -61,8 +61,7 @@ async function ensureUsersTable() {
                 login TEXT UNIQUE NOT NULL,
                 fullName TEXT NOT NULL,
                 password TEXT NOT NULL,
-                role TEXT NOT NULL DEFAULT 'user',
-                email TEXT
+                role TEXT NOT NULL DEFAULT 'user'
             );
         `);
         
@@ -71,15 +70,15 @@ async function ensureUsersTable() {
             console.log('Seeding users table...');
             // In a real app, passwords should be hashed. Storing plain text as requested.
             const initialUsers = [
-                { login: 'admin', fullName: 'Адміністратор', password: 'Admin2025!', role: 'admin', email: 'admin@example.com' },
-                { login: 'Gomba', fullName: 'Гомба Ю.В.', password: 'Gomba2025!', role: 'user', email: 'gomba@example.com' },
-                { login: 'Dan', fullName: 'Дан Т.О.', password: 'Dan2025!', role: 'user', email: 'dan@example.com' },
-                { login: 'Snietkov', fullName: 'Снєтков С.Ю.', password: 'Snietkov2025!', role: 'user', email: 'snietkov@example.com' }
+                { login: 'admin', fullName: 'Адміністратор', password: 'Admin2025!', role: 'admin' },
+                { login: 'Gomba', fullName: 'Гомба Ю.В.', password: 'Gomba2025!', role: 'user' },
+                { login: 'Dan', fullName: 'Дан Т.О.', password: 'Dan2025!', role: 'user' },
+                { login: 'Snietkov', fullName: 'Снєтков С.Ю.', password: 'Snietkov2025!', role: 'user' }
             ];
             for (const user of initialUsers) {
                 await client.query(
-                    'INSERT INTO users (login, fullName, password, role, email) VALUES ($1, $2, $3, $4, $5)',
-                    [user.login, user.fullName, user.password, user.role, user.email]
+                    'INSERT INTO users (login, fullName, password, role) VALUES ($1, $2, $3, $4)',
+                    [user.login, user.fullName, user.password, user.role]
                 );
             }
             console.log('Users table seeded.');
@@ -155,37 +154,11 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-app.post('/api/recover-password', async (req, res) => {
-    const { email } = req.body;
-    if (!email) {
-        return res.status(400).json({ error: 'E-mail є обов\'язковим' });
-    }
-    const client = await pool.connect();
-    try {
-        const result = await client.query('SELECT login, password FROM users WHERE email = $1', [email]);
-        if (result.rowCount > 0) {
-            const user = result.rows[0];
-            // SIMULATION: In a real app, you would send an email.
-            // Here, we just log it to the server console for demonstration.
-            console.log(`Password recovery for ${email}:`);
-            console.log(`  Login: ${user.login}`);
-            console.log(`  Password: ${user.password}`);
-        }
-        // Always send a generic success response to prevent email enumeration.
-        res.json({ success: true, message: 'Якщо такий e-mail існує, інструкції для відновлення було надіслано.' });
-    } catch (error) {
-        console.error('Password recovery error:', error);
-        res.status(500).json({ error: 'Помилка сервера' });
-    } finally {
-        client.release();
-    }
-});
-
 // Get all users (admin only)
 app.get('/api/users', async (req, res) => {
     const client = await pool.connect();
     try {
-        const result = await client.query('SELECT id, login, fullName, password, role, email FROM users ORDER BY login ASC');
+        const result = await client.query('SELECT id, login, fullName, password, role FROM users ORDER BY login ASC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch users' });
@@ -196,12 +169,12 @@ app.get('/api/users', async (req, res) => {
 
 // Add a user (admin only)
 app.post('/api/users', async (req, res) => {
-    const { login, fullName, password, role, email } = req.body;
+    const { login, fullName, password, role } = req.body;
     const client = await pool.connect();
     try {
         const result = await client.query(
-            'INSERT INTO users (login, fullName, password, role, email) VALUES ($1, $2, $3, $4, $5) RETURNING id, login, fullName, password, role, email',
-            [login, fullName, password, role, email]
+            'INSERT INTO users (login, fullName, password, role) VALUES ($1, $2, $3, $4) RETURNING id, login, fullName, password, role',
+            [login, fullName, password, role]
         );
         res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -214,12 +187,12 @@ app.post('/api/users', async (req, res) => {
 // Update a user (admin only)
 app.put('/api/users/:id', async (req, res) => {
     const { id } = req.params;
-    const { login, fullName, password, role, email } = req.body;
+    const { login, fullName, password, role } = req.body;
     const client = await pool.connect();
     try {
         const result = await client.query(
-            'UPDATE users SET login = $1, fullName = $2, password = $3, role = $4, email = $5 WHERE id = $6 RETURNING id, login, fullName, password, role, email',
-            [login, fullName, password, role, email, id]
+            'UPDATE users SET login = $1, fullName = $2, password = $3, role = $4 WHERE id = $5 RETURNING id, login, fullName, password, role',
+            [login, fullName, password, role, id]
         );
         res.json(result.rows[0]);
     } catch (error) {

@@ -1,4 +1,5 @@
 
+
 export interface Record {
   id: number;
   registrationNumber: string;
@@ -86,7 +87,6 @@ export interface User {
   fullName: string;
   password?: string; // Password is plain text as requested
   role: 'admin' | 'user';
-  email?: string;
 }
 
 export interface CurrentUser {
