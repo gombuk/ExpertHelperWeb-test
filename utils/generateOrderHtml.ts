@@ -67,16 +67,59 @@ export const generateOrderHtml = (record: AppRecord, firm: Firm, costModelTable:
         discount: record.discount,
         pages: record.pages,
         units: record.units,
-        productionType: record.productionType, // Not directly used in conclusion calculation, but for type consistency
-        certificateServiceType: record.certificateServiceType, // Not directly used in conclusion calculation, but for type consistency
+        productionType: record.productionType,
+        certificateServiceType: record.certificateServiceType,
         conclusionType: record.conclusionType,
+        customCost: record.customCost,
     }, costModelTable, generalSettings, 'conclusions');
 
     const vat = sumWithDiscount * 0.2;
     const totalWithVat = sumWithDiscount + vat;
 
-    if (record.conclusionType === 'contractual') {
-        const emptyRowsCount = 8; // Number of empty rows to ensure consistent table height
+    if (record.conclusionType === 'contractual' || record.conclusionType === 'custom_cost') {
+        const isCustomCost = record.conclusionType === 'custom_cost';
+        const serviceDescription = isCustomCost 
+            ? 'Експертний висновок (індивідуальний тариф)'
+            : 'Аналіз витрат сировини, яка переробляється на митній території України';
+        
+        let serviceRowsHtml = '';
+        if (isCustomCost) {
+            serviceRowsHtml = `
+                <tr>
+                    <td>&nbsp;</td>
+                    <td style="text-align: center;">індивідуальний</td>
+                    <td>${serviceDescription}</td>
+                    <td></td>
+                    <td></td>
+                    <td class="num">${sumWithoutDiscount.toFixed(2)}</td>
+                    <td class="num">${sumWithDiscount.toFixed(2)}</td>
+                </tr>
+            `;
+        } else { // Contractual
+             serviceRowsHtml = `
+                <tr>
+                    <td>&nbsp;</td>
+                    <td style="text-align: center;">договірний</td>
+                    <td>${serviceDescription}</td>
+                    <td></td>
+                    <td></td>
+                    <td class="num">${pageCost.toFixed(2)}</td>
+                    <td class="num">${(pageCost * discountMultiplier).toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td><div class="service-cell"><span>підтвердження кодів згідно УКТЗЕД</span><span>${record.codes || 0} код</span></div></td>
+                    <td></td>
+                    <td></td>
+                    <td class="num">${codeCostValue.toFixed(2)}</td>
+                    <td class="num">${(codeCostValue * discountMultiplier).toFixed(2)}</td>
+                </tr>
+            `;
+        }
+        
+        const filledRowsCount = isCustomCost ? 1 : 2;
+        const emptyRowsCount = 8 - filledRowsCount;
         let emptyRowsHtml = '';
         for (let i = 0; i < emptyRowsCount; i++) {
             emptyRowsHtml += `
@@ -346,24 +389,7 @@ export const generateOrderHtml = (record: AppRecord, firm: Firm, costModelTable:
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td>&nbsp;</td>
-                                <td style="text-align: center;">договірний</td>
-                                <td>Аналіз витрат сировини, яка переробляється на митній території України</td>
-                                <td></td>
-                                <td></td>
-                                <td class="num">${pageCost.toFixed(2)}</td>
-                                <td class="num">${(pageCost * discountMultiplier).toFixed(2)}</td>
-                            </tr>
-                            <tr>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td><div class="service-cell"><span>підтвердження кодів згідно УКТЗЕД</span><span>${record.codes || 0} код</span></div></td>
-                                <td></td>
-                                <td></td>
-                                <td class="num">${codeCostValue.toFixed(2)}</td>
-                                <td class="num">${(codeCostValue * discountMultiplier).toFixed(2)}</td>
-                            </tr>
+                            ${serviceRowsHtml}
                             ${emptyRowsHtml}
                         </tbody>
                         <tfoot>
@@ -1269,6 +1295,8 @@ export const generateMonthlyReportHtml = (
                 productionType: record.productionType,
                 certificateServiceType: record.certificateServiceType,
                 conclusionType: record.conclusionType,
+                customCost: record.customCost,
+                isQuickRegistration: record.isQuickRegistration
             };
             const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
             const sum = isConclusions ? sumWithDiscount : sumWithoutDiscount;

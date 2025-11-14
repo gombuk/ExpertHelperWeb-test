@@ -105,7 +105,8 @@ const initialAppData: AppData = {
         complexity: true,
         urgency: true,
         discount: "Зі знижкою",
-        conclusionType: "standard"
+        conclusionType: "standard",
+        isQuickRegistration: true,
       },
       {
         id: 858,
@@ -162,6 +163,26 @@ const initialAppData: AppData = {
         actNumber: "А-865",
         conclusionType: "contractual",
         pages: 5
+      },
+       {
+        id: 866,
+        registrationNumber: "Д-866",
+        expert: "Гомба Ю.В.",
+        status: "Виконано",
+        startDate: "2025-11-05",
+        endDate: "2025-11-05",
+        companyName: "ТОВ \"Сандерс-Виноградів\"",
+        comment: "своя вартість",
+        units: 1,
+        models: 0,
+        positions: 0,
+        codes: 0,
+        complexity: false,
+        urgency: false,
+        discount: "Зі знижкою",
+        actNumber: "А-866",
+        conclusionType: "custom_cost",
+        customCost: 2500,
       }
     ],
     costModelTable: [
@@ -677,19 +698,56 @@ const App: React.FC = () => {
     reader.readAsText(file);
   }, [activeMode, showToast]);
 
-  const exportRecords = useCallback(() => {
-    const dataToExport = appData[activeMode].records;
+  const exportRecords = useCallback((startDate?: string, endDate?: string) => {
+    let dataToExport = appData[activeMode].records;
+
+    if (startDate || endDate) {
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+
+        if (start) start.setHours(0, 0, 0, 0);
+        if (end) end.setHours(23, 59, 59, 999);
+
+        dataToExport = dataToExport.filter(record => {
+            try {
+                const recordDate = new Date(record.endDate);
+                if (isNaN(recordDate.getTime())) return false; // Skip invalid dates
+                
+                const isAfterStart = start ? recordDate >= start : true;
+                const isBeforeEnd = end ? recordDate <= end : true;
+                return isAfterStart && isBeforeEnd;
+            } catch (e) {
+                return false;
+            }
+        });
+        
+        if (dataToExport.length === 0) {
+            showToast('Не знайдено записів за вибраний період.', 'error');
+            return;
+        }
+    }
+
     const jsonString = JSON.stringify(dataToExport, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${activeMode}_export_${new Date().toISOString().slice(0, 10)}.json`;
+    
+    let period = new Date().toISOString().slice(0, 10);
+    if (startDate && endDate) {
+        period = `${startDate}_${endDate}`;
+    } else if (startDate) {
+        period = `from_${startDate}`;
+    } else if (endDate) {
+        period = `to_${endDate}`;
+    }
+
+    link.download = `${activeMode}_export_${period}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    showToast('Експорт успішний.');
+    showToast(`Експорт ${dataToExport.length} записів успішний.`);
   }, [appData, activeMode, showToast]);
   
   // Initialize selectedMonth based on data
@@ -769,6 +827,17 @@ const App: React.FC = () => {
         records: prevData[activeMode].records.filter(record => record.id !== id),
       },
     }));
+  };
+
+  const deleteMultipleRecords = (ids: number[]) => {
+    setAppData(prevData => ({
+        ...prevData,
+        [activeMode]: {
+            ...prevData[activeMode],
+            records: prevData[activeMode].records.filter(record => !ids.includes(record.id)),
+        },
+    }));
+    showToast(`Видалено ${ids.length} запис(ів).`);
   };
 
   const setCostModelTable = (newTable: CostModelRow[]) => {
@@ -905,7 +974,23 @@ const App: React.FC = () => {
           <>
             <Statistics records={filteredRecords} costModelTable={currentModeData.costModelTable} generalSettings={currentModeData.generalSettings} experts={allExpertsForMode} selectedExpert={selectedExpert} setSelectedExpert={setSelectedExpert} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} monthlyPlan={currentMonthlyPlan} activeMode={activeMode} lastRegistrationNumber={lastRegistrationNumber} currentUser={currentUser} />
             <div className="mt-8">
-              <RecordsTable records={filteredRecords} onAddRecord={addRecord} onUpdateRecord={updateRecord} onDeleteRecord={deleteRecord} firms={currentModeData.firms} experts={allExpertsForMode} costModelTable={currentModeData.costModelTable} generalSettings={currentModeData.generalSettings} showToast={showToast} activeMode={activeMode} selectedMonth={selectedMonth} onImportRecords={importRecords} onExportRecords={exportRecords} />
+              <RecordsTable
+                records={filteredRecords}
+                allRecords={currentModeData.records}
+                onAddRecord={addRecord}
+                onUpdateRecord={updateRecord}
+                onDeleteRecord={deleteRecord}
+                onDeleteMultipleRecords={deleteMultipleRecords}
+                firms={currentModeData.firms}
+                experts={allExpertsForMode}
+                costModelTable={currentModeData.costModelTable}
+                generalSettings={currentModeData.generalSettings}
+                showToast={showToast}
+                activeMode={activeMode}
+                selectedMonth={selectedMonth}
+                onImportRecords={importRecords}
+                onExportRecords={exportRecords}
+              />
             </div>
           </>
         );

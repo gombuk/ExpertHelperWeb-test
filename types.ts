@@ -22,7 +22,9 @@ export interface Record {
   productionType?: 'fully_produced' | 'sufficient_processing';
   certificateServiceType?: 'standard' | 'replacement' | 'reissuance' | 'duplicate';
   actNumber?: string;
-  conclusionType?: 'standard' | 'contractual';
+  conclusionType?: 'standard' | 'contractual' | 'custom_cost';
+  isQuickRegistration?: boolean;
+  customCost?: number;
 }
 
 export interface CostModelRow {

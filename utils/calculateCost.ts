@@ -10,7 +10,9 @@ interface CostCalculationData {
     codes?: number;
     complexity?: boolean;
     discount?: string;
-    conclusionType?: 'standard' | 'contractual';
+    conclusionType?: 'standard' | 'contractual' | 'custom_cost';
+    customCost?: number;
+    isQuickRegistration?: boolean;
 
     // For both
     positions: number;
@@ -56,6 +58,16 @@ export const calculateCost = (
     let urgentAdditionalPagesCost = 0;
     let urgencyMultiplier = 1;
 
+    const zeroReturn = { 
+        sumWithoutDiscount: 0, sumWithDiscount: 0, 
+        modelCost: 0, codeCostValue: 0, complexityCost: 0, urgencyCost: 0, pageCost: 0, discountMultiplier: 1,
+        mainCertCost: 0, positionsCost: 0, additionalPagesCost: 0, urgentMainCertCost: 0, urgentPositionsCost: 0, urgentAdditionalPagesCost: 0, urgencyMultiplier: 1
+    };
+
+    if (data.isQuickRegistration) {
+        return zeroReturn;
+    }
+
     if (activeMode === 'certificates') {
         const gs = generalSettings;
         urgencyMultiplier = data.urgency ? (1 + (gs.urgency || 0) / 100) : 1;
@@ -97,15 +109,18 @@ export const calculateCost = (
         sumWithDiscount = sumWithoutDiscount; // Certificates do not have 'Зі знижкою' logic.
 
     } else { // --- Logic for Conclusions ---
+        
+        if (data.discount === 'Зі знижкою') {
+            discountMultiplier = (1 - ((generalSettings.discount || 0) / 100));
+        }
 
-        if (data.conclusionType === 'contractual') {
+        if (data.conclusionType === 'custom_cost') {
+            sumWithoutDiscount = data.customCost || 0;
+            sumWithDiscount = sumWithoutDiscount * discountMultiplier;
+        } else if (data.conclusionType === 'contractual') {
             pageCost = (data.pages || 0) * (generalSettings.contractualPageCost || 0);
             codeCostValue = (data.codes || 0) * (generalSettings.codeCost || 0);
             sumWithoutDiscount = pageCost + codeCostValue;
-
-            if (data.discount === 'Зі знижкою') {
-                discountMultiplier = (1 - ((generalSettings.discount || 0) / 100));
-            }
             sumWithDiscount = sumWithoutDiscount * discountMultiplier;
 
         } else { // --- Standard Conclusion Logic ---
@@ -121,11 +136,7 @@ export const calculateCost = (
             }
             
             if (!modelCostRow) {
-                return { 
-                    sumWithoutDiscount: 0, sumWithDiscount: 0, 
-                    modelCost: 0, codeCostValue: 0, complexityCost: 0, urgencyCost: 0, pageCost: 0, discountMultiplier: 1,
-                    mainCertCost: 0, positionsCost: 0, additionalPagesCost: 0, urgentMainCertCost: 0, urgentPositionsCost: 0, urgentAdditionalPagesCost: 0, urgencyMultiplier: 1
-                };
+                return zeroReturn;
             }
             
             modelCost = getCostForPositions(data.positions, modelCostRow);
@@ -145,10 +156,6 @@ export const calculateCost = (
             }
             
             sumWithoutDiscount = currentCost;
-
-            if (data.discount === 'Зі знижкою') {
-                discountMultiplier = (1 - ((generalSettings.discount || 0) / 100));
-            }
             sumWithDiscount = sumWithoutDiscount * discountMultiplier;
         }
     }

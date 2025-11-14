@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 // FIX: Aliased Record to AppRecord to avoid conflict with the built-in Record type.
 import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings } from '../types';
@@ -42,6 +41,8 @@ const initialFormState: Omit<AppRecord, 'id'> = {
     productionType: 'fully_produced',
     certificateServiceType: 'standard',
     conclusionType: 'standard',
+    isQuickRegistration: false,
+    customCost: 0,
 };
 
 const RecordModal: React.FC<RecordModalProps> = ({ 
@@ -61,6 +62,7 @@ const RecordModal: React.FC<RecordModalProps> = ({
     const [formState, setFormState] = useState(initialFormState);
     const [sumWithoutDiscount, setSumWithoutDiscount] = useState(0);
     const [sumWithDiscount, setSumWithDiscount] = useState(0);
+    const [registrationMode, setRegistrationMode] = useState<'full' | 'quick'>('full');
 
     const resetState = useCallback(() => {
         setFormState(initialFormState);
@@ -80,7 +82,6 @@ const RecordModal: React.FC<RecordModalProps> = ({
             models: fullRecord.models,
             positions: fullRecord.positions,
             codes: fullRecord.codes,
-            // FIX: Corrected typo from `fullFullRecord.complexity` to `fullRecord.complexity`.
             complexity: fullRecord.complexity,
             urgency: fullRecord.urgency,
             discount: fullRecord.discount,
@@ -90,6 +91,8 @@ const RecordModal: React.FC<RecordModalProps> = ({
             productionType: fullRecord.productionType,
             certificateServiceType: fullRecord.certificateServiceType,
             conclusionType: fullRecord.conclusionType,
+            customCost: fullRecord.customCost,
+            isQuickRegistration: fullRecord.isQuickRegistration
         };
         const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
         setSumWithoutDiscount(sumWithoutDiscount);
@@ -100,11 +103,22 @@ const RecordModal: React.FC<RecordModalProps> = ({
         if (isOpen) {
             if (mode === 'edit' && recordToEdit) {
                 populateForm(recordToEdit);
+                setRegistrationMode('full'); // Editing is always full
             } else {
                 resetState();
+                setRegistrationMode('full');
             }
         }
     }, [isOpen, mode, recordToEdit, resetState, populateForm]);
+
+    useEffect(() => {
+        if (activeMode === 'conclusions' && formState.conclusionType === 'custom_cost') {
+            const customCost = Number(formState.customCost) || 0;
+            setSumWithoutDiscount(customCost);
+            const discountMultiplier = formState.discount === 'Зі знижкою' ? (1 - (generalSettings.discount || 0) / 100) : 1;
+            setSumWithDiscount(customCost * discountMultiplier);
+        }
+    }, [formState.customCost, formState.discount, activeMode, formState.conclusionType, generalSettings.discount]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -113,11 +127,11 @@ const RecordModal: React.FC<RecordModalProps> = ({
              const { checked } = e.target as HTMLInputElement;
              setFormState(prev => ({ ...prev, [name]: checked }));
         } else {
-             if (name === 'conclusionType') {
-                if (value === 'contractual') {
+            if (name === 'conclusionType') {
+                if (value === 'contractual' || value === 'custom_cost') {
                     setFormState(prev => ({
                         ...prev,
-                        conclusionType: 'contractual',
+                        conclusionType: value,
                         models: 0,
                         positions: 0,
                         complexity: false,
@@ -128,6 +142,7 @@ const RecordModal: React.FC<RecordModalProps> = ({
                         ...prev,
                         conclusionType: 'standard',
                         pages: 0,
+                        customCost: 0,
                     }));
                 }
             } else {
@@ -150,53 +165,59 @@ const RecordModal: React.FC<RecordModalProps> = ({
             productionType: formState.productionType,
             certificateServiceType: formState.certificateServiceType,
             conclusionType: formState.conclusionType,
+            customCost: Number(formState.customCost),
+            isQuickRegistration: registrationMode === 'quick',
         };
 
         const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
         setSumWithoutDiscount(sumWithoutDiscount);
         setSumWithDiscount(sumWithDiscount);
-    }, [formState, costModelTable, generalSettings, activeMode]);
+    }, [formState, costModelTable, generalSettings, activeMode, registrationMode]);
     
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        let finalRecordData: Omit<AppRecord, 'id'> = {
-            ...formState,
-            models: Number(formState.models),
-            positions: Number(formState.positions),
-            codes: Number(formState.codes),
-            units: Number(formState.units),
-            pages: Number(formState.pages),
-            additionalPages: Number(formState.additionalPages),
-        };
+        let finalRecordData: Omit<AppRecord, 'id'>;
 
-        if (activeMode === 'conclusions') {
-            if (formState.conclusionType === 'contractual') {
-                finalRecordData = {
-                    ...finalRecordData,
-                    models: 0,
-                    positions: 0,
-                    complexity: false,
-                    urgency: false,
-                };
-            } else { // standard
-                finalRecordData = {
-                    ...finalRecordData,
-                    pages: 0
-                };
-            }
-        } else if (activeMode === 'certificates') {
+        if (registrationMode === 'quick') {
             finalRecordData = {
-                ...finalRecordData,
-                models: 1,
-                codes: 0,
-                complexity: false,
-                discount: 'Повна',
+                ...initialFormState,
+                registrationNumber: formState.registrationNumber,
+                startDate: formState.startDate,
+                endDate: formState.endDate,
+                companyName: formState.companyName,
+                expert: formState.expert,
+                isQuickRegistration: true,
+                status: 'Не виконано',
             };
-            if (finalRecordData.certificateServiceType !== 'standard') {
-                finalRecordData.pages = 0;
-                finalRecordData.positions = 0;
-                finalRecordData.additionalPages = 0;
+        } else {
+            finalRecordData = {
+                ...formState,
+                models: Number(formState.models),
+                positions: Number(formState.positions),
+                codes: Number(formState.codes),
+                units: Number(formState.units),
+                pages: Number(formState.pages),
+                additionalPages: Number(formState.additionalPages),
+                customCost: Number(formState.customCost),
+                isQuickRegistration: false,
+            };
+
+            if (activeMode === 'conclusions') {
+                if (finalRecordData.conclusionType === 'contractual') {
+                    finalRecordData = { ...finalRecordData, models: 0, positions: 0, complexity: false, urgency: false, customCost: 0 };
+                } else if (finalRecordData.conclusionType === 'custom_cost') {
+                    finalRecordData = { ...finalRecordData, models: 0, positions: 0, codes: 0, complexity: false, urgency: false, pages: 0 };
+                } else { // standard
+                    finalRecordData = { ...finalRecordData, pages: 0, customCost: 0 };
+                }
+            } else if (activeMode === 'certificates') {
+                finalRecordData = { ...finalRecordData, models: 1, codes: 0, complexity: false, discount: 'Повна' };
+                if (finalRecordData.certificateServiceType !== 'standard') {
+                    finalRecordData.pages = 0;
+                    finalRecordData.positions = 0;
+                    finalRecordData.additionalPages = 0;
+                }
             }
         }
         
@@ -231,6 +252,48 @@ const RecordModal: React.FC<RecordModalProps> = ({
                 </div>
                 
                 <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-6">
+                    {mode === 'add' && (
+                        <div className="flex items-center justify-center p-1 bg-gray-100 rounded-lg mb-6 dark:bg-gray-700">
+                            <button type="button" onClick={() => setRegistrationMode('full')} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors w-1/2 ${registrationMode === 'full' ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-200'}`}>
+                                Повна реєстрація
+                            </button>
+                            <button type="button" onClick={() => setRegistrationMode('quick')} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors w-1/2 ${registrationMode === 'quick' ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-200'}`}>
+                                Швидка реєстрація
+                            </button>
+                        </div>
+                    )}
+
+                    {registrationMode === 'quick' ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label htmlFor="registrationNumber" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Реєстраційний номер *</label>
+                                <input type="text" name="registrationNumber" value={formState.registrationNumber} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                            </div>
+                            <div>
+                                <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Дата початку *</label>
+                                <input type="date" name="startDate" value={formState.startDate} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                            </div>
+                            <div>
+                                <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Дата закінчення *</label>
+                                <input type="date" name="endDate" value={formState.endDate} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                            </div>
+                            <div>
+                                <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Назва компанії *</label>
+                                <select name="companyName" value={formState.companyName} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <option value="" disabled>Виберіть компанію</option>
+                                    {firms.map(firm => <option key={firm.id} value={firm.name}>{firm.name}</option>)}
+                                </select>
+                            </div>
+                             <div className="md:col-span-2">
+                                <label htmlFor="expert" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Експерт *</label>
+                                <select name="expert" value={formState.expert} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <option value="" disabled>Виберіть експерта</option>
+                                    {experts.map(expert => <option key={expert} value={expert}>{expert}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    ) : (
+                    <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label htmlFor="registrationNumber" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Реєстраційний номер *</label>
@@ -267,32 +330,16 @@ const RecordModal: React.FC<RecordModalProps> = ({
                                 <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200">Тип тарифу</label>
                                 <div className="flex items-center space-x-4">
                                     <div className="flex items-center">
-                                        <input
-                                            type="radio"
-                                            id="standard_tariff"
-                                            name="conclusionType"
-                                            value="standard"
-                                            checked={formState.conclusionType === 'standard'}
-                                            onChange={handleInputChange}
-                                            className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
-                                        />
-                                        <label htmlFor="standard_tariff" className="ml-2 block text-sm text-gray-900 dark:text-white">
-                                            Стандартний
-                                        </label>
+                                        <input type="radio" id="standard_tariff" name="conclusionType" value="standard" checked={formState.conclusionType === 'standard'} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
+                                        <label htmlFor="standard_tariff" className="ml-2 block text-sm text-gray-900 dark:text-white">Стандартний</label>
                                     </div>
                                     <div className="flex items-center">
-                                        <input
-                                            type="radio"
-                                            id="contractual_tariff"
-                                            name="conclusionType"
-                                            value="contractual"
-                                            checked={formState.conclusionType === 'contractual'}
-                                            onChange={handleInputChange}
-                                            className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
-                                        />
-                                        <label htmlFor="contractual_tariff" className="ml-2 block text-sm text-gray-900 dark:text-white">
-                                            Договірний
-                                        </label>
+                                        <input type="radio" id="contractual_tariff" name="conclusionType" value="contractual" checked={formState.conclusionType === 'contractual'} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
+                                        <label htmlFor="contractual_tariff" className="ml-2 block text-sm text-gray-900 dark:text-white">Договірний</label>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <input type="radio" id="custom_cost_tariff" name="conclusionType" value="custom_cost" checked={formState.conclusionType === 'custom_cost'} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
+                                        <label htmlFor="custom_cost_tariff" className="ml-2 block text-sm text-gray-900 dark:text-white">Своя вартість</label>
                                     </div>
                                 </div>
                             </div>
@@ -370,7 +417,7 @@ const RecordModal: React.FC<RecordModalProps> = ({
                             <input type="number" name="positions" value={formState.positions} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         )}
-                         {activeMode === 'conclusions' && (
+                         {activeMode === 'conclusions' && formState.conclusionType !== 'custom_cost' && (
                             <div>
                                 <label htmlFor="codes" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Кількість кодів</label>
                                 <input type="number" name="codes" value={formState.codes} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
@@ -378,20 +425,29 @@ const RecordModal: React.FC<RecordModalProps> = ({
                         )}
                     </div>
                     
+                    {formState.conclusionType !== 'custom_cost' && (
                     <div className="pt-4">
                         <button type="button" onClick={handleCalculate} className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                             Розрахувати вартість
                         </button>
                     </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {activeMode === 'conclusions' ? (
                             <>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Сума без знижки</label>
-                                    <input type="text" value={sumWithoutDiscount.toFixed(2)} readOnly className="input-field bg-gray-100 dark:bg-gray-700 dark:text-white dark:border-gray-600" />
-                                </div>
+                                {formState.conclusionType === 'custom_cost' ? (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Сума без знижки *</label>
+                                        <input type="number" name="customCost" value={formState.customCost || ''} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Сума без знижки</label>
+                                        <input type="text" value={sumWithoutDiscount.toFixed(2)} readOnly className="input-field bg-gray-100 dark:bg-gray-700 dark:text-white dark:border-gray-600" />
+                                    </div>
+                                )}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Сума зі знижкою</label>
                                     <input type="text" value={sumWithDiscount.toFixed(2)} readOnly className="input-field bg-gray-100 dark:bg-gray-700 dark:text-white dark:border-gray-600" />
@@ -444,6 +500,8 @@ const RecordModal: React.FC<RecordModalProps> = ({
                             </div>
                         )}
                     </div>
+                    </>
+                    )}
 
                     <style>{`.input-field { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); outline: none; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; } .input-field:focus { border-color: #4F46E5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); } .dark .input-field { background-color: #374151; border-color: #4B5563; color: #FFFFFF; } .dark .input-field:focus { border-color: #6366F1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }`}</style>
                 

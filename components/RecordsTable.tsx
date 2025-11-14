@@ -6,13 +6,16 @@ import { calculateCost } from '../utils/calculateCost';
 import type { AppMode } from '../App';
 // FIX: Corrected the import of generateOrderHtml, generateCertificateOrderHtml, and generateRecordsHtml.
 import { generateOrderHtml, generateCertificateOrderHtml, generateRecordsHtml, generateFirmsHtml, generateMonthlyReportHtml, generateJournalHtml } from '../utils/generateOrderHtml';
+import BulkDeleteModal from './BulkDeleteModal';
 
 
 interface RecordsTableProps {
     records: AppRecord[];
+    allRecords: AppRecord[];
     onAddRecord: (newRecord: Omit<AppRecord, 'id' | 'startDate' | 'endDate'> & { startDate: string; endDate: string }) => void;
     onUpdateRecord: (updatedRecord: AppRecord) => void;
     onDeleteRecord: (id: number) => void;
+    onDeleteMultipleRecords: (ids: number[]) => void;
     firms: Firm[];
     experts: string[];
     costModelTable: CostModelRow[];
@@ -21,7 +24,7 @@ interface RecordsTableProps {
     activeMode: AppMode;
     selectedMonth: string; // Add selectedMonth prop
     onImportRecords: (file: File) => void;
-    onExportRecords: () => void;
+    onExportRecords: (startDate?: string, endDate?: string) => void;
 }
 
 const SearchIcon = () => (
@@ -49,25 +52,25 @@ const PrintIcon = () => (
 );
 
 const ReportIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 2v-6m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
 );
 
 const JournalIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.206 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.794 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.794 5 16.5 5c1.706 0 3.332.477 4.5 1.253v13C19.832 18.477 18.206 18 16.5 18c-1.706 0-3.332.477-4.5 1.253" />
     </svg>
 );
 
 const UploadIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
     </svg>
 );
 
 const DownloadIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>
 );
@@ -116,14 +119,17 @@ const certificateServiceTypeDisplay: Record<string, string> = {
 
 const conclusionTypeDisplay: Record<string, string> = {
     'standard': 'Стандартний',
-    'contractual': 'Договірний'
+    'contractual': 'Договірний',
+    'custom_cost': 'Своя вартість'
 };
 
 const RecordsTable: React.FC<RecordsTableProps> = ({ 
     records, 
+    allRecords,
     onAddRecord, 
     onUpdateRecord, 
-    onDeleteRecord, 
+    onDeleteRecord,
+    onDeleteMultipleRecords, 
     firms, 
     experts, 
     costModelTable, 
@@ -139,7 +145,10 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
+    const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [exportStartDate, setExportStartDate] = useState('');
+    const [exportEndDate, setExportEndDate] = useState('');
 
     
     const handleOpenAddModal = () => {
@@ -276,6 +285,8 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                 productionType: record.productionType,
                 certificateServiceType: record.certificateServiceType,
                 conclusionType: record.conclusionType,
+                customCost: record.customCost,
+                isQuickRegistration: record.isQuickRegistration,
             };
             const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
             return { ...record, sumWithoutDiscount, sumWithDiscount };
@@ -408,13 +419,33 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                     />
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                    <button
-                        onClick={onExportRecords}
-                        className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
-                        title="Експортувати записи"
-                    >
-                        <DownloadIcon />
-                    </button>
+                    <div className="flex items-end gap-2 p-2 border rounded-lg dark:border-gray-600">
+                        <div>
+                            <label className="text-xs text-gray-500 dark:text-gray-400">Експорт з</label>
+                            <input 
+                                type="date" 
+                                value={exportStartDate} 
+                                onChange={e => setExportStartDate(e.target.value)}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs text-gray-500 dark:text-gray-400">по</label>
+                            <input 
+                                type="date" 
+                                value={exportEndDate} 
+                                onChange={e => setExportEndDate(e.target.value)}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-500"
+                            />
+                        </div>
+                        <button
+                            onClick={() => onExportRecords(exportStartDate, exportEndDate)}
+                            className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
+                            title="Експортувати записи за вибраний період"
+                        >
+                            <DownloadIcon />
+                        </button>
+                    </div>
                      <button
                         onClick={handleImportClick}
                         className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
@@ -451,9 +482,18 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                     >
                         <JournalIcon />
                     </button>
+                    <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
+                    <button
+                        onClick={() => setIsBulkDeleteModalOpen(true)}
+                        className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                        title="Масове видалення записів"
+                    >
+                        <DeleteIcon />
+                        <span className="ml-2">Видалити</span>
+                    </button>
                     <button 
                         onClick={handleOpenAddModal}
-                        className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors ml-auto lg:ml-0">
+                        className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
                         <span className="text-xl mr-2 font-light">+</span> Додати запис
                     </button>
                 </div>
@@ -488,7 +528,10 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                                 <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     {activeMode === 'conclusions' ? (
                                         <>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{record.registrationNumber}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                                                {record.registrationNumber}
+                                                {record.isQuickRegistration && <span className="ml-2"><Tag text="Швидка" color="orange" /></span>}
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.actNumber}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.startDate)}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.endDate)}</td>
@@ -510,7 +553,10 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                                         </>
                                     ) : (
                                         <>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{record.registrationNumber}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                                                {record.registrationNumber}
+                                                {record.isQuickRegistration && <span className="ml-2"><Tag text="Швидка" color="orange" /></span>}
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.actNumber}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.startDate)}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.endDate)}</td>
@@ -535,7 +581,8 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                                             <button 
                                                 onClick={() => activeMode === 'conclusions' ? handleGenerateOrder(record) : handleGenerateCertificateOrder(record)} 
                                                 title={activeMode === 'conclusions' ? "Сформувати наряд" : "Сформувати наряд (сертифікат)"} 
-                                                className="focus:outline-none"
+                                                className="focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                                disabled={record.isQuickRegistration}
                                             >
                                                 <PrintIcon />
                                             </button>
@@ -586,6 +633,13 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                 </div>
             </div>
         )}
+        <BulkDeleteModal
+            isOpen={isBulkDeleteModalOpen}
+            onClose={() => setIsBulkDeleteModalOpen(false)}
+            allRecords={allRecords}
+            onDelete={onDeleteMultipleRecords}
+            activeMode={activeMode}
+        />
         </>
     );
 };
