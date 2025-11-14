@@ -1010,7 +1010,7 @@ export const generateCertificateOrderHtml = (record: AppRecord, firm: Firm, gene
                         <td>${formatNum(urgentMainCertCost)}</td>
                         <td>${record.positions > 0 ? record.positions : ''}</td>
                         <td>${urgentPositionsCost > 0 ? formatNum(urgentPositionsCost) : ''}</td>
-                        <td>${record.additionalPages > 0 ? record.additionalPages : ''}</td>
+                        <td>${(record.additionalPages || 0) > 0 ? record.additionalPages : ''}</td>
                         <td>${urgentAdditionalPagesCost > 0 ? formatNum(urgentAdditionalPagesCost) : ''}</td>
                         <td>${formatNum(sumWithoutDiscount)}</td>
                         <td>${formatNum(vat)}</td>

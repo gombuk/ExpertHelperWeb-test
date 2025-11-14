@@ -544,9 +544,9 @@ const App: React.FC = () => {
         showToast('Помилка завантаження користувачів. Використовуються демонстраційні дані.', 'error');
         const savedUsers = sessionStorage.getItem('users');
         if (savedUsers) {
-            setUsers(JSON.parse(savedUsers));
+            setUsers(JSON.parse(savedUsers) as User[]);
         } else {
-            const fallbackUsers = [
+            const fallbackUsers: User[] = [
                 { id: 1, login: 'admin', fullName: 'Адміністратор', password: 'Admin2025!', role: 'admin' },
                 { id: 2, login: 'Gomba', fullName: 'Гомба Ю.В.', password: 'Gomba2025!', role: 'user' },
                 { id: 3, login: 'Dan', fullName: 'Дан Т.О.', password: 'Dan2025!', role: 'user' },
