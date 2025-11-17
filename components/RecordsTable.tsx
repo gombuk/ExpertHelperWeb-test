@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useRef } from 'react';
 // FIX: Aliased Record to AppRecord to avoid conflict with the built-in Record type.
-import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings } from '../types';
+import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings, CurrentUser } from '../types';
 import RecordModal from './AddRecordModal';
+import RecordInfoModal from './RecordInfoModal'; // Import the new component
 import { calculateCost } from '../utils/calculateCost';
 import type { AppMode } from '../App';
 // FIX: Corrected the import of generateOrderHtml, generateCertificateOrderHtml, and generateRecordsHtml.
@@ -25,6 +26,8 @@ interface RecordsTableProps {
     selectedMonth: string; // Add selectedMonth prop
     onImportRecords: (file: File) => void;
     onExportRecords: (startDate?: string, endDate?: string) => void;
+    currentUser: CurrentUser | null;
+    unprocessedCounts: { conclusions: number; certificates: number };
 }
 
 const SearchIcon = () => (
@@ -90,8 +93,8 @@ const Tag: React.FC<{ text: string, color: 'orange' | 'red' | 'neutral' }> = ({ 
     );
 };
 
-const StatusTag: React.FC<{ status: 'Виконано' | 'Не виконано' }> = ({ status }) => {
-    const colorClasses = status === 'Виконано'
+const StatusTag: React.FC<{ status: 'Проведено' | 'Не проведено' }> = ({ status }) => {
+    const colorClasses = status === 'Проведено'
         ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
         : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100';
     return (
@@ -138,7 +141,9 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     activeMode, 
     selectedMonth,
     onImportRecords,
-    onExportRecords 
+    onExportRecords,
+    currentUser,
+    unprocessedCounts
 }) => {
     const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
     const [recordToEdit, setRecordToEdit] = useState<AppRecord | null>(null);
@@ -146,6 +151,7 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
     const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+    const [infoModalRecord, setInfoModalRecord] = useState<(AppRecord & { sumWithoutDiscount: number, sumWithDiscount: number }) | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [exportStartDate, setExportStartDate] = useState('');
     const [exportEndDate, setExportEndDate] = useState('');
@@ -205,10 +211,18 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     const handleGenerateCertificateOrder = (record: AppRecord) => {
         if (activeMode !== 'certificates') return;
 
-        const firm = firms.find(f => f.name === record.companyName);
+        let firm: Firm | undefined = firms.find(f => f.name === record.companyName);
         if (!firm) {
-            showToast('Фірму для цього запису не знайдено.', 'error');
-            return;
+            // Assume it's a manual FOP and create a placeholder firm object
+            firm = {
+                id: Date.now(),
+                name: record.companyName,
+                address: '—', // Placeholder as we don't have this data
+                directorName: record.companyName, // Use FOP name for director field
+                edrpou: '—',
+                taxNumber: '—',
+                productName: '' // Not used in certificate order
+            };
         }
 
         const orderHtml = generateCertificateOrderHtml(record, firm, generalSettings);
@@ -357,6 +371,43 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
             return dateStr; // Return original string if parsing fails
         }
     };
+    
+    const getConclusionNoun = (count: number) => {
+        if (count === 1) return 'експертний висновок';
+        if (count > 1 && count < 5) return 'експертні висновки';
+        return 'експертних висновків';
+    };
+
+    const getCertificateNoun = (count: number) => {
+        if (count === 1) return 'сертифікат';
+        if (count > 1 && count < 5) return 'сертифікати';
+        return 'сертифікатів';
+    };
+
+    const renderSnyetkovMessage = () => {
+        if (currentUser?.fullName !== 'Снєтков С.Ю.') return null;
+
+        const { conclusions, certificates } = unprocessedCounts;
+        const totalUnprocessed = conclusions + certificates;
+
+        if (totalUnprocessed === 0) {
+            return (
+                <div className="mb-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded-lg dark:bg-green-900/50 dark:border-green-700 dark:text-green-200">
+                    Всі роботи проведені
+                </div>
+            );
+        }
+
+        const conclusionText = conclusions > 0 ? `${conclusions} ${getConclusionNoun(conclusions)}` : '';
+        const certificateText = certificates > 0 ? `${certificates} ${getCertificateNoun(certificates)}` : '';
+        const connector = conclusionText && certificateText ? ' та ' : '';
+
+        return (
+            <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg dark:bg-yellow-900/50 dark:border-yellow-700 dark:text-yellow-200">
+                Потрібно провести: {conclusionText}{connector}{certificateText}
+            </div>
+        );
+    };
 
     const conclusionHeaders = [
         { key: 'registrationNumber', label: 'РЕЄСТР. №' },
@@ -407,6 +458,7 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     return (
         <>
         <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:text-gray-100">
+             {renderSnyetkovMessage()}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
                 <div className="relative w-full lg:w-auto">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -525,7 +577,16 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                         {sortedRecords.map((record) => (
-                                <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <tr 
+                                    key={record.id} 
+                                    onDoubleClick={() => setInfoModalRecord(record)} 
+                                    className={`
+                                        ${currentUser?.fullName === 'Снєтков С.Ю.' && record.status === 'Не проведено' 
+                                            ? 'bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-800/60' 
+                                            : 'hover:bg-gray-50 dark:hover:bg-gray-700'} 
+                                        cursor-pointer
+                                    `}
+                                >
                                     {activeMode === 'conclusions' ? (
                                         <>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white flex items-center">
@@ -609,6 +670,14 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                 generalSettings={generalSettings}
                 showToast={showToast}
                 activeMode={activeMode}
+                allRecords={allRecords}
+            />
+        )}
+        {infoModalRecord && (
+            <RecordInfoModal 
+                record={infoModalRecord} 
+                onClose={() => setInfoModalRecord(null)}
+                activeMode={activeMode} 
             />
         )}
         {isDeleteModalOpen && (

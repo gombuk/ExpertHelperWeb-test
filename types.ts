@@ -4,7 +4,7 @@ export interface Record {
   id: number;
   registrationNumber: string;
   expert: string;
-  status: 'Виконано' | 'Не виконано';
+  status: 'Проведено' | 'Не проведено';
   startDate: string;
   endDate:string;
   companyName: string;

@@ -38,7 +38,7 @@ const initialAppData: AppData = {
         id: 864,
         registrationNumber: "Д-864",
         expert: "Гомба Ю.В.",
-        status: "Виконано",
+        status: "Проведено",
         startDate: "2025-11-03",
         endDate: "2025-11-03",
         companyName: "ТОВ \"Сандерс-Виноградів\"",
@@ -57,7 +57,7 @@ const initialAppData: AppData = {
         id: 863,
         registrationNumber: "Д-863",
         expert: "Гомба Ю.В.",
-        status: "Виконано",
+        status: "Проведено",
         startDate: "2025-11-02",
         endDate: "2025-11-02",
         companyName: "ТОВ \"Сандерс-Виноградів\"",
@@ -75,7 +75,7 @@ const initialAppData: AppData = {
         id: 862,
         registrationNumber: "Д-862",
         expert: "Гомба Ю.В.",
-        status: "Виконано",
+        status: "Проведено",
         startDate: "2025-10-31",
         endDate: "2025-11-03",
         companyName: "ТОВ \"ТРІО\"",
@@ -93,7 +93,7 @@ const initialAppData: AppData = {
         id: 859,
         registrationNumber: "Д-859",
         expert: "Палчей Я.В.",
-        status: "Не виконано",
+        status: "Не проведено",
         startDate: "2025-10-31",
         endDate: "2025-10-31",
         companyName: "ТОВ \"Новітекс\"",
@@ -112,7 +112,7 @@ const initialAppData: AppData = {
         id: 858,
         registrationNumber: "Д-858",
         expert: "Палчей Я.В.",
-        status: "Не виконано",
+        status: "Не проведено",
         startDate: "2025-10-30",
         endDate: "2025-10-31",
         companyName: "ТОВ \"Флоріан Шуз\"",
@@ -130,7 +130,7 @@ const initialAppData: AppData = {
         id: 857,
         registrationNumber: "Д-857",
         expert: "Гомба Ю.В.",
-        status: "Не виконано",
+        status: "Не проведено",
         startDate: "2025-11-01",
         endDate: "2025-11-02",
         companyName: "ТОВ \"ТРІО\"",
@@ -148,7 +148,7 @@ const initialAppData: AppData = {
         id: 865,
         registrationNumber: "Д-865",
         expert: "Дан Т.О.",
-        status: "Виконано",
+        status: "Проведено",
         startDate: "2025-11-04",
         endDate: "2025-11-04",
         companyName: "ТОВ \"Новітекс\"",
@@ -168,7 +168,7 @@ const initialAppData: AppData = {
         id: 866,
         registrationNumber: "Д-866",
         expert: "Гомба Ю.В.",
-        status: "Виконано",
+        status: "Проведено",
         startDate: "2025-11-05",
         endDate: "2025-11-05",
         companyName: "ТОВ \"Сандерс-Виноградів\"",
@@ -340,7 +340,7 @@ const initialAppData: AppData = {
         id: 101,
         registrationNumber: "C-101",
         expert: "Дан Т.О.",
-        status: "Виконано",
+        status: "Проведено",
         startDate: "2025-11-05",
         endDate: "2025-11-06",
         companyName: "ТОВ \"СЛІП АЙДІ УКРАЇНА\"",
@@ -359,7 +359,7 @@ const initialAppData: AppData = {
         id: 102,
         registrationNumber: "C-102",
         expert: "Гомба Ю.В.",
-        status: "Не виконано",
+        status: "Не проведено",
         startDate: "2025-11-07",
         endDate: "2025-11-08",
         companyName: "ТОВ \"Новітекс\"",
@@ -435,11 +435,15 @@ const API_URL = '/api/data';
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => {
     const savedUser = sessionStorage.getItem('currentUser');
-    try {
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch (error) {
-      return null;
+    if (savedUser) {
+        try {
+            return JSON.parse(savedUser);
+        } catch (e) {
+            console.error('Failed to parse user from session storage', e);
+            return null;
+        }
     }
+    return null;
   });
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [activeMode, setActiveMode] = useState<AppMode>('conclusions');
@@ -935,20 +939,29 @@ const App: React.FC = () => {
     });
   }, [currentModeData.records, selectedExpert, selectedMonth]);
 
-  const lastRegistrationNumber = useMemo(() => {
-    if (currentModeData.records.length === 0) return 'N/A';
+  const lastRecord = useMemo(() => {
+    if (currentModeData.records.length === 0) return null;
     const getNumericPart = (regNum: string) => {
         const match = regNum.match(/(\d+)/);
         return match ? parseInt(match[1], 10) : 0;
     };
     return currentModeData.records.reduce((latest, current) => 
         getNumericPart(current.registrationNumber) > getNumericPart(latest.registrationNumber) ? current : latest
-    ).registrationNumber;
+    );
   }, [currentModeData.records]);
   
   const currentMonthlyPlan = useMemo(() => {
     return currentModeData.monthlyPlans[selectedMonth] || { totalPlan: 0, expertPlans: [] };
   }, [currentModeData.monthlyPlans, selectedMonth]);
+
+  const unprocessedCountsForSnyetkov = useMemo(() => {
+    if (currentUser?.fullName !== 'Снєтков С.Ю.') {
+      return { conclusions: 0, certificates: 0 };
+    }
+    const unprocessedConclusions = appData.conclusions.records.filter(r => r.status === 'Не проведено').length;
+    const unprocessedCertificates = appData.certificates.records.filter(r => r.status === 'Не проведено').length;
+    return { conclusions: unprocessedConclusions, certificates: unprocessedCertificates };
+  }, [appData, currentUser]);
 
 
   const renderContent = () => {
@@ -972,7 +985,7 @@ const App: React.FC = () => {
       default:
         return (
           <>
-            <Statistics records={filteredRecords} costModelTable={currentModeData.costModelTable} generalSettings={currentModeData.generalSettings} experts={allExpertsForMode} selectedExpert={selectedExpert} setSelectedExpert={setSelectedExpert} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} monthlyPlan={currentMonthlyPlan} activeMode={activeMode} lastRegistrationNumber={lastRegistrationNumber} currentUser={currentUser} />
+            <Statistics records={filteredRecords} costModelTable={currentModeData.costModelTable} generalSettings={currentModeData.generalSettings} experts={allExpertsForMode} selectedExpert={selectedExpert} setSelectedExpert={setSelectedExpert} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} monthlyPlan={currentMonthlyPlan} activeMode={activeMode} lastRecord={lastRecord} currentUser={currentUser} />
             <div className="mt-8">
               <RecordsTable
                 records={filteredRecords}
@@ -990,6 +1003,8 @@ const App: React.FC = () => {
                 selectedMonth={selectedMonth}
                 onImportRecords={importRecords}
                 onExportRecords={exportRecords}
+                currentUser={currentUser}
+                unprocessedCounts={unprocessedCountsForSnyetkov}
               />
             </div>
           </>

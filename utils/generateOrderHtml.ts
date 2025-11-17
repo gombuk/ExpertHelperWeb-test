@@ -76,6 +76,8 @@ export const generateOrderHtml = (record: AppRecord, firm: Firm, costModelTable:
     const vat = sumWithDiscount * 0.2;
     const totalWithVat = sumWithDiscount + vat;
 
+    const dateDisplayHtml = `<div>дата видачі ${formatDate(record.startDate)}</div>`;
+
     if (record.conclusionType === 'contractual' || record.conclusionType === 'custom_cost') {
         const isCustomCost = record.conclusionType === 'custom_cost';
         const serviceDescription = isCustomCost 
@@ -320,7 +322,9 @@ export const generateOrderHtml = (record: AppRecord, firm: Firm, costModelTable:
                     <div class="flex order-title">
                         <div class="bold">НАРЯД №Д-${record.registrationNumber}</div>
                         <div style="flex-grow: 1;"></div>
-                        <div>дата видачі ${formatDate(record.startDate)}</div>
+                        <div style="text-align: right;">
+                           ${dateDisplayHtml}
+                        </div>
                     </div>
     
                     <div class="flex section">
@@ -435,6 +439,7 @@ export const generateOrderHtml = (record: AppRecord, firm: Firm, costModelTable:
                                     <div class="label">Керівник підрозділу</div>
                                     <div class="line"></div>
                                 </div>
+                                <div style="margin-top: 25px; text-align: right;">${formatDate(record.endDate)}</div>
                             </div>
                         </div>
                     </div>
@@ -693,7 +698,9 @@ export const generateOrderHtml = (record: AppRecord, firm: Firm, costModelTable:
                     <div class="flex order-title">
                         <div class="bold">НАРЯД №Д-${record.registrationNumber}</div>
                         <div style="flex-grow: 1;"></div>
-                        <div>дата видачі ${formatDate(record.startDate)}</div>
+                        <div style="text-align: right;">
+                            ${dateDisplayHtml}
+                        </div>
                     </div>
 
                     <div class="flex section">
@@ -807,6 +814,7 @@ export const generateOrderHtml = (record: AppRecord, firm: Firm, costModelTable:
                                         <div class="label">Керівник підрозділу</div>
                                         <div class="line"></div>
                                     </div>
+                                    <div style="margin-top: 25px; text-align: right;">${formatDate(record.endDate)}</div>
                                 </div>
                             </div>
                         </div>

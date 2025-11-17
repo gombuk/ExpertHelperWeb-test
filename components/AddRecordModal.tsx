@@ -17,6 +17,7 @@ interface RecordModalProps {
     generalSettings: GeneralSettings;
     showToast: (message: string, type?: 'success' | 'error') => void;
     activeMode: AppMode;
+    allRecords: AppRecord[];
 }
 
 const initialFormState: Omit<AppRecord, 'id'> = {
@@ -34,7 +35,7 @@ const initialFormState: Omit<AppRecord, 'id'> = {
     complexity: false,
     urgency: false,
     discount: 'Повна',
-    status: 'Не виконано',
+    status: 'Не проведено',
     certificateForm: '',
     pages: 0,
     additionalPages: 0,
@@ -44,6 +45,8 @@ const initialFormState: Omit<AppRecord, 'id'> = {
     isQuickRegistration: false,
     customCost: 0,
 };
+
+const FOP_MANUAL_INPUT_KEY = '_FOP_MANUAL_INPUT_';
 
 const RecordModal: React.FC<RecordModalProps> = ({ 
     isOpen, 
@@ -57,17 +60,20 @@ const RecordModal: React.FC<RecordModalProps> = ({
     costModelTable,
     generalSettings,
     showToast,
-    activeMode
+    activeMode,
+    allRecords
 }) => {
     const [formState, setFormState] = useState(initialFormState);
     const [sumWithoutDiscount, setSumWithoutDiscount] = useState(0);
     const [sumWithDiscount, setSumWithDiscount] = useState(0);
     const [registrationMode, setRegistrationMode] = useState<'full' | 'quick'>('full');
+    const [manualCompanyName, setManualCompanyName] = useState('');
 
     const resetState = useCallback(() => {
         setFormState(initialFormState);
         setSumWithoutDiscount(0);
         setSumWithDiscount(0);
+        setManualCompanyName('');
     }, []);
 
     const populateForm = useCallback((record: AppRecord) => {
@@ -76,7 +82,19 @@ const RecordModal: React.FC<RecordModalProps> = ({
             ...record,
             comment: record.comment || '',
         };
-        setFormState(fullRecord);
+
+        if (activeMode === 'certificates') {
+            const isFirmInList = firms.some(f => f.name === record.companyName);
+            if (!isFirmInList) {
+                setFormState({ ...fullRecord, companyName: FOP_MANUAL_INPUT_KEY });
+                setManualCompanyName(record.companyName);
+            } else {
+                setFormState(fullRecord);
+                setManualCompanyName('');
+            }
+        } else {
+             setFormState(fullRecord);
+        }
         
         const costData = {
             models: fullRecord.models,
@@ -97,7 +115,7 @@ const RecordModal: React.FC<RecordModalProps> = ({
         const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
         setSumWithoutDiscount(sumWithoutDiscount);
         setSumWithDiscount(sumWithDiscount);
-    }, [costModelTable, generalSettings, activeMode]);
+    }, [costModelTable, generalSettings, activeMode, firms]);
     
     useEffect(() => {
         if (isOpen) {
@@ -122,6 +140,10 @@ const RecordModal: React.FC<RecordModalProps> = ({
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
+
+        if (name === 'companyName' && value !== FOP_MANUAL_INPUT_KEY) {
+            setManualCompanyName('');
+        }
         
         if (type === 'checkbox') {
              const { checked } = e.target as HTMLInputElement;
@@ -176,6 +198,28 @@ const RecordModal: React.FC<RecordModalProps> = ({
     
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (activeMode === 'certificates' && registrationMode === 'full' && formState.companyName === FOP_MANUAL_INPUT_KEY && !manualCompanyName.trim()) {
+            showToast('Будь ласка, введіть назву/ПІБ ФОП.', 'error');
+            return;
+        }
+
+        if (formState.registrationNumber && formState.startDate) {
+            const currentYear = new Date(formState.startDate).getFullYear();
+            const isDuplicate = allRecords.some(rec => {
+                if (mode === 'edit' && recordToEdit && rec.id === recordToEdit.id) {
+                    return false; // Exclude self when editing
+                }
+                if (!rec.startDate) return false; // Ignore records without a start date
+                const recordYear = new Date(rec.startDate).getFullYear();
+                return rec.registrationNumber.trim().toLowerCase() === formState.registrationNumber.trim().toLowerCase() && recordYear === currentYear;
+            });
+
+            if (isDuplicate) {
+                showToast(`Реєстраційний номер "${formState.registrationNumber}" вже існує в ${currentYear} році.`, 'error');
+                return; // Stop submission
+            }
+        }
         
         let finalRecordData: Omit<AppRecord, 'id'>;
 
@@ -188,7 +232,7 @@ const RecordModal: React.FC<RecordModalProps> = ({
                 companyName: formState.companyName,
                 expert: formState.expert,
                 isQuickRegistration: true,
-                status: 'Не виконано',
+                status: 'Не проведено',
             };
         } else {
             finalRecordData = {
@@ -202,6 +246,10 @@ const RecordModal: React.FC<RecordModalProps> = ({
                 customCost: Number(formState.customCost),
                 isQuickRegistration: false,
             };
+
+            if (activeMode === 'certificates' && formState.companyName === FOP_MANUAL_INPUT_KEY) {
+                finalRecordData.companyName = manualCompanyName.trim();
+            }
 
             if (activeMode === 'conclusions') {
                 if (finalRecordData.conclusionType === 'contractual') {
@@ -303,12 +351,28 @@ const RecordModal: React.FC<RecordModalProps> = ({
                             <label htmlFor="actNumber" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Акт</label>
                             <input type="text" name="actNumber" value={formState.actNumber || ''} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
-                        <div>
+                        <div className="md:col-span-2">
                             <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Назва компанії *</label>
                             <select name="companyName" value={formState.companyName} onChange={handleInputChange} required className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                 <option value="" disabled>Виберіть компанію</option>
                                 {firms.map(firm => <option key={firm.id} value={firm.name}>{firm.name}</option>)}
+                                {activeMode === 'certificates' && <option value={FOP_MANUAL_INPUT_KEY}>ФОП (інший)...</option>}
                             </select>
+                            {activeMode === 'certificates' && formState.companyName === FOP_MANUAL_INPUT_KEY && (
+                                <div className="mt-4">
+                                    <label htmlFor="manualCompanyName" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">ПІБ/Назва ФОП *</label>
+                                    <input
+                                        type="text"
+                                        id="manualCompanyName"
+                                        name="manualCompanyName"
+                                        placeholder="Введіть ПІБ/назву"
+                                        value={manualCompanyName}
+                                        onChange={(e) => setManualCompanyName(e.target.value)}
+                                        required
+                                        className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Дата початку *</label>
@@ -469,8 +533,8 @@ const RecordModal: React.FC<RecordModalProps> = ({
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Статус</label>
                              <select name="status" value={formState.status} onChange={handleInputChange} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                <option value="Не виконано">Не виконано</option>
-                                <option value="Виконано">Виконано</option>
+                                <option value="Не проведено">Не проведено</option>
+                                <option value="Проведено">Проведено</option>
                             </select>
                         </div>
                     </div>

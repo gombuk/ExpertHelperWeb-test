@@ -21,7 +21,7 @@ interface StatisticsProps {
     setSelectedMonth: (month: string) => void;
     monthlyPlan: MonthlyPlan;
     activeMode: AppMode;
-    lastRegistrationNumber: string;
+    lastRecord: AppRecord | null;
     currentUser: CurrentUser | null;
 }
 
@@ -41,7 +41,7 @@ const Statistics: React.FC<StatisticsProps> = ({
     setSelectedMonth,
     monthlyPlan,
     activeMode,
-    lastRegistrationNumber,
+    lastRecord,
     currentUser
 }) => {
     const [totalWithoutDiscount, setTotalWithoutDiscount] = useState(0);
@@ -73,11 +73,11 @@ const Statistics: React.FC<StatisticsProps> = ({
 
     }, [records, costModelTable, generalSettings, activeMode]);
 
-    const completedCount = records.filter(r => r.status === 'Виконано').length;
-    const notCompletedCount = records.filter(r => r.status === 'Не виконано').length;
+    const completedCount = records.filter(r => r.status === 'Проведено').length;
+    const notCompletedCount = records.filter(r => r.status === 'Не проведено').length;
 
     const totalCompletedOverall = records.reduce((acc, record) => {
-        if (record.status === 'Виконано') {
+        if (record.status === 'Проведено') {
             const costData = {
                 models: record.models,
                 positions: record.positions,
@@ -136,13 +136,14 @@ const Statistics: React.FC<StatisticsProps> = ({
                 <StatCard 
                     title="Всього записів"
                     value={records.length.toString()}
-                    subtitle={`Виконано: ${completedCount} | Не виконано: ${notCompletedCount}`}
+                    subtitle={`Проведено: ${completedCount} | Не проведено: ${notCompletedCount}`}
                     icon="document"
                     color="blue"
                 />
                 <StatCard 
                     title="Останній рег. номер"
-                    value={lastRegistrationNumber}
+                    value={lastRecord?.registrationNumber || 'N/A'}
+                    subtitle={lastRecord ? `${lastRecord.expert} | ${lastRecord.companyName}` : ''}
                     icon="document"
                     color="blue"
                 />
@@ -189,7 +190,7 @@ const Statistics: React.FC<StatisticsProps> = ({
                  <h3 className="text-lg font-semibold mb-4 dark:text-white">Виконання плану експертами</h3>
                  <div className="space-y-4">
                      {monthlyPlan.expertPlans.map(plan => {
-                         const expertRecords = records.filter(r => r.expert === plan.name && r.status === 'Виконано');
+                         const expertRecords = records.filter(r => r.expert === plan.name);
                          const totalCompleted = expertRecords.reduce((acc, record) => {
                              const costData = {
                                 models: record.models,
