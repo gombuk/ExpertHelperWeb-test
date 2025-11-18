@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 // FIX: Aliased Record to AppRecord to avoid conflict with the built-in Record type.
-import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings, CurrentUser } from '../types';
+import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings, CurrentUser, EditingActivity } from '../types';
 import RecordModal from './AddRecordModal';
 import RecordInfoModal from './RecordInfoModal'; // Import the new component
 import { calculateCost } from '../utils/calculateCost';
@@ -28,6 +28,8 @@ interface RecordsTableProps {
     onExportRecords: (startDate?: string, endDate?: string) => void;
     currentUser: CurrentUser | null;
     unprocessedCounts: { conclusions: number; certificates: number };
+    editingActivity?: EditingActivity[];
+    onReportFocus?: (recordId: number, isEditing: boolean) => void;
 }
 
 const SearchIcon = () => (
@@ -143,7 +145,9 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     onImportRecords,
     onExportRecords,
     currentUser,
-    unprocessedCounts
+    unprocessedCounts,
+    editingActivity = [],
+    onReportFocus
 }) => {
     const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
     const [recordToEdit, setRecordToEdit] = useState<AppRecord | null>(null);
@@ -163,11 +167,20 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     };
 
     const handleOpenEditModal = (record: AppRecord) => {
+        const editor = editingActivity.find(e => e.recordId === record.id && e.userFullName !== currentUser?.fullName);
+        if (editor) {
+            showToast(`Цей запис зараз редагує ${editor.userFullName}. Будь ласка, зачекайте.`, 'error');
+            return;
+        }
         setRecordToEdit(record);
         setModalMode('edit');
+        if (onReportFocus) onReportFocus(record.id, true);
     };
 
     const handleCloseModal = () => {
+        if (modalMode === 'edit' && recordToEdit && onReportFocus) {
+            onReportFocus(recordToEdit.id, false);
+        }
         setModalMode(null);
         setRecordToEdit(null);
     };
@@ -552,7 +565,7 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
             </div>
 
             <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border-collapse">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
                             {headers.map(header => (
@@ -576,17 +589,25 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                        {sortedRecords.map((record) => (
+                        {sortedRecords.map((record) => {
+                            const activeEditor = editingActivity.find(e => e.recordId === record.id && e.userFullName !== currentUser?.fullName);
+                            const rowClass = activeEditor 
+                                ? 'bg-purple-50 border-2 border-purple-500 dark:bg-purple-900/30 dark:border-purple-500' 
+                                : `hover:bg-gray-50 dark:hover:bg-gray-700 ${currentUser?.fullName === 'Снєтков С.Ю.' && record.status === 'Не проведено' ? 'bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-800/60' : ''}`;
+
+                            return (
                                 <tr 
                                     key={record.id} 
                                     onDoubleClick={() => setInfoModalRecord(record)} 
-                                    className={`
-                                        ${currentUser?.fullName === 'Снєтков С.Ю.' && record.status === 'Не проведено' 
-                                            ? 'bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-800/60' 
-                                            : 'hover:bg-gray-50 dark:hover:bg-gray-700'} 
-                                        cursor-pointer
-                                    `}
+                                    className={`${rowClass} cursor-pointer transition-colors duration-200 relative`}
                                 >
+                                    {activeEditor && (
+                                        <td colSpan={headers.length} className="absolute top-0 left-0 w-full h-0 p-0 overflow-visible z-10 pointer-events-none">
+                                            <div className="absolute -top-3 left-4 bg-purple-500 text-white text-[10px] px-2 py-0.5 rounded shadow-sm">
+                                                редагує: {activeEditor.userFullName}
+                                            </div>
+                                        </td>
+                                    )}
                                     {activeMode === 'conclusions' ? (
                                         <>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white flex items-center">
@@ -638,7 +659,7 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                                     )}
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div className="flex items-center space-x-3">
-                                            <button onClick={() => handleOpenEditModal(record)} title="Редагувати запис" className="focus:outline-none"><EditIcon /></button>
+                                            <button onClick={() => handleOpenEditModal(record)} title="Редагувати запис" className="focus:outline-none disabled:opacity-50" disabled={!!activeEditor}><EditIcon /></button>
                                             <button 
                                                 onClick={() => activeMode === 'conclusions' ? handleGenerateOrder(record) : handleGenerateCertificateOrder(record)} 
                                                 title={activeMode === 'conclusions' ? "Сформувати наряд" : "Сформувати наряд (сертифікат)"} 
@@ -651,7 +672,8 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

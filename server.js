@@ -284,6 +284,45 @@ app.get('/api/activity/active-users', async (req, res) => {
     }
 });
 
+// --- Record Editing Focus API (In-Memory) ---
+// Store: recordId -> { userFullName, timestamp }
+const editingRecords = new Map();
+
+app.post('/api/activity/focus', (req, res) => {
+    const { recordId, userFullName, isEditing } = req.body;
+    if (!recordId || !userFullName) return res.status(400).json({ error: 'Missing data' });
+
+    if (isEditing) {
+        editingRecords.set(recordId, { userFullName, timestamp: Date.now() });
+    } else {
+        // Only remove if it's the same user (prevent clearing someone else's focus)
+        const current = editingRecords.get(recordId);
+        if (current && current.userFullName === userFullName) {
+            editingRecords.delete(recordId);
+        }
+    }
+    res.json({ success: true });
+});
+
+app.get('/api/activity/focus', (req, res) => {
+    // Cleanup stale locks (> 5 mins)
+    const now = Date.now();
+    for (const [id, data] of editingRecords.entries()) {
+        if (now - data.timestamp > 300000) {
+            editingRecords.delete(id);
+        }
+    }
+    
+    // Convert Map to Array for JSON
+    const activityList = Array.from(editingRecords.entries()).map(([id, data]) => ({
+        recordId: Number(id),
+        userFullName: data.userFullName,
+        timestamp: data.timestamp
+    }));
+    res.json(activityList);
+});
+
+
 // Cleanup inactive users periodically from DB
 setInterval(async () => {
     try {

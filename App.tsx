@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import Header from './components/Header';
 import Statistics from './components/Statistics';
 import RecordsTable from './components/RecordsTable';
@@ -8,7 +8,7 @@ import PlanSettings from './components/PlanSettings';
 import Toast from './components/Toast';
 import Login from './components/Login';
 import UserManagement from './components/UserManagement';
-import { Record as AppRecord, CostModelRow, GeneralSettings, Firm, MonthlyPlan, CurrentUser, User } from './types';
+import { Record as AppRecord, CostModelRow, GeneralSettings, Firm, MonthlyPlan, CurrentUser, User, EditingActivity } from './types';
 
 export type View = 'dashboard' | 'settings' | 'firms' | 'plan' | 'user_management';
 export type AppMode = 'conclusions' | 'certificates';
@@ -33,223 +33,16 @@ interface AppData {
 
 const initialAppData: AppData = {
   conclusions: {
-    records: [
-      {
-        id: 864,
-        registrationNumber: "Д-864",
-        expert: "Гомба Ю.В.",
-        status: "Проведено",
-        startDate: "2025-11-03",
-        endDate: "2025-11-03",
-        companyName: "ТОВ \"Сандерс-Виноградів\"",
-        comment: "-",
-        units: 2568,
-        models: 3,
-        positions: 10,
-        codes: 3,
-        complexity: true,
-        urgency: true,
-        discount: "Зі знижкою",
-        actNumber: "А-864",
-        conclusionType: "standard"
-      },
-      {
-        id: 863,
-        registrationNumber: "Д-863",
-        expert: "Гомба Ю.В.",
-        status: "Проведено",
-        startDate: "2025-11-02",
-        endDate: "2025-11-02",
-        companyName: "ТОВ \"Сандерс-Виноградів\"",
-        comment: "додаток 140",
-        units: 3837,
-        models: 6,
-        positions: 15,
-        codes: 6,
-        complexity: true,
-        urgency: true,
-        discount: "Зі знижкою",
-        conclusionType: "standard"
-      },
-      {
-        id: 862,
-        registrationNumber: "Д-862",
-        expert: "Гомба Ю.В.",
-        status: "Проведено",
-        startDate: "2025-10-31",
-        endDate: "2025-11-03",
-        companyName: "ТОВ \"ТРІО\"",
-        comment: "-",
-        units: 20211,
-        models: 10,
-        positions: 11,
-        codes: 5,
-        complexity: true,
-        urgency: false,
-        discount: "Зі знижкою",
-        conclusionType: "standard"
-      },
-      {
-        id: 859,
-        registrationNumber: "Д-859",
-        expert: "Палчей Я.В.",
-        status: "Не проведено",
-        startDate: "2025-10-31",
-        endDate: "2025-10-31",
-        companyName: "ТОВ \"Новітекс\"",
-        comment: "-",
-        units: 582,
-        models: 14,
-        positions: 81,
-        codes: 1,
-        complexity: true,
-        urgency: true,
-        discount: "Зі знижкою",
-        conclusionType: "standard",
-        isQuickRegistration: true,
-      },
-      {
-        id: 858,
-        registrationNumber: "Д-858",
-        expert: "Палчей Я.В.",
-        status: "Не проведено",
-        startDate: "2025-10-30",
-        endDate: "2025-10-31",
-        companyName: "ТОВ \"Флоріан Шуз\"",
-        comment: "-",
-        units: 12478,
-        models: 6,
-        positions: 26,
-        codes: 1,
-        complexity: true,
-        urgency: false,
-        discount: "Повна",
-        conclusionType: "standard"
-      },
-      {
-        id: 857,
-        registrationNumber: "Д-857",
-        expert: "Гомба Ю.В.",
-        status: "Не проведено",
-        startDate: "2025-11-01",
-        endDate: "2025-11-02",
-        companyName: "ТОВ \"ТРІО\"",
-        comment: "додаток 338",
-        units: 1031,
-        models: 3,
-        positions: 10,
-        codes: 3,
-        complexity: true,
-        urgency: true,
-        discount: "Зі знижкою",
-        conclusionType: "standard"
-      },
-      {
-        id: 865,
-        registrationNumber: "Д-865",
-        expert: "Дан Т.О.",
-        status: "Проведено",
-        startDate: "2025-11-04",
-        endDate: "2025-11-04",
-        companyName: "ТОВ \"Новітекс\"",
-        comment: "договірний",
-        units: 1,
-        models: 0,
-        positions: 0,
-        codes: 2,
-        complexity: false,
-        urgency: false,
-        discount: "Зі знижкою",
-        actNumber: "А-865",
-        conclusionType: "contractual",
-        pages: 5
-      },
-       {
-        id: 866,
-        registrationNumber: "Д-866",
-        expert: "Гомба Ю.В.",
-        status: "Проведено",
-        startDate: "2025-11-05",
-        endDate: "2025-11-05",
-        companyName: "ТОВ \"Сандерс-Виноградів\"",
-        comment: "своя вартість",
-        units: 1,
-        models: 0,
-        positions: 0,
-        codes: 0,
-        complexity: false,
-        urgency: false,
-        discount: "Зі знижкою",
-        actNumber: "А-866",
-        conclusionType: "custom_cost",
-        customCost: 2500,
-      }
-    ],
+    records: [],
     costModelTable: [
-      {
-        id: 1,
-        models: 1,
-        upTo10: "1200",
-        upTo20: "1260",
-        upTo50: "1320",
-        plus51: "1350"
-      },
-      {
-        id: 2,
-        models: 2,
-        upTo10: "1270",
-        upTo20: "1330",
-        upTo50: "1390",
-        plus51: "1420"
-      },
-      {
-        id: 3,
-        models: 3,
-        upTo10: "1340",
-        upTo20: "1400",
-        upTo50: "1460",
-        plus51: "1490"
-      },
-      {
-        id: 4,
-        models: 4,
-        upTo10: "1410",
-        upTo20: "1470",
-        upTo50: "1530",
-        plus51: "1560"
-      },
-      {
-        id: 5,
-        models: 5,
-        upTo10: "1480",
-        upTo20: "1540",
-        upTo50: "1600",
-        plus51: "1630"
-      },
-      {
-        id: 6,
-        models: 6,
-        upTo10: "1550",
-        upTo20: "1610",
-        upTo50: "1670",
-        plus51: "1700"
-      },
-      {
-        id: 7,
-        models: 10,
-        upTo10: "1800",
-        upTo20: "1900",
-        upTo50: "2000",
-        plus51: "2100"
-      },
-      {
-        id: 8,
-        models: 14,
-        upTo10: "2200",
-        upTo20: "2300",
-        upTo50: "2400",
-        plus51: "2500"
-      }
+      { id: 1, models: 1, upTo10: "1200", upTo20: "1260", upTo50: "1320", plus51: "1350" },
+      { id: 2, models: 2, upTo10: "1270", upTo20: "1330", upTo50: "1390", plus51: "1420" },
+      { id: 3, models: 3, upTo10: "1340", upTo20: "1400", upTo50: "1460", plus51: "1490" },
+      { id: 4, models: 4, upTo10: "1410", upTo20: "1470", upTo50: "1530", plus51: "1560" },
+      { id: 5, models: 5, upTo10: "1480", upTo20: "1540", upTo50: "1600", plus51: "1630" },
+      { id: 6, models: 6, upTo10: "1550", upTo20: "1610", upTo50: "1670", plus51: "1700" },
+      { id: 7, models: 10, upTo10: "1800", upTo20: "1900", upTo50: "2000", plus51: "2100" },
+      { id: 8, models: 14, upTo10: "2200", upTo20: "2300", upTo50: "2400", plus51: "2500" }
     ],
     generalSettings: {
       urgency: 100,
@@ -258,122 +51,11 @@ const initialAppData: AppData = {
       complexity: 30,
       contractualPageCost: 1560
     },
-    monthlyPlans: {
-      "2025-10": {
-        totalPlan: 300000,
-        expertPlans: [
-          {
-            id: 1,
-            name: "Гомба Ю.В.",
-            planAmount: "100000"
-          },
-          {
-            id: 2,
-            name: "Дан Т.О.",
-            planAmount: "100000"
-          },
-          {
-            id: 3,
-            name: "Палчей Я.В.",
-            planAmount: "100000"
-          }
-        ]
-      },
-      "2025-11": {
-        totalPlan: 350000,
-        expertPlans: [
-          {
-            id: 1,
-            name: "Гомба Ю.В.",
-            planAmount: "150000"
-          },
-          {
-            id: 3,
-            name: "Палчей Я.В.",
-            planAmount: "120000"
-          }
-        ]
-      }
-    },
-    firms: [
-      {
-        id: 1,
-        name: "ТОВ \"Сандерс-Виноградів\"",
-        address: "М.ВИНОГРАДІВ, ВУЛ. КОМУНАЛЬНА , 10",
-        directorName: "Розентал Є.Г.",
-        edrpou: "12345678",
-        taxNumber: "123456789012",
-        productName: "Взуття"
-      },
-      {
-        id: 3,
-        name: "ТОВ \"ТРІО\"",
-        address: "М.КИЇВ, ВУЛ. ХРЕЩАТИК, 1",
-        directorName: "Іванов І.І.",
-        edrpou: "34567890",
-        taxNumber: "345678901234",
-        productName: "Аксесуари"
-      },
-      {
-        id: 4,
-        name: "ТОВ \"Новітекс\"",
-        address: "м. Виноградів",
-        directorName: "Палчей Я.В.",
-        edrpou: "34514696",
-        taxNumber: "345146907052",
-        productName: "Шкіряні вироби"
-      },
-      {
-        id: 5,
-        name: "ТОВ \"Флоріан Шуз\"",
-        address: "М.ОДЕСА, ВУЛ. ДЕРИБАСІВСЬКА, 5",
-        directorName: "Сидоренко С.С.",
-        edrpou: "56789012",
-        taxNumber: "567890123456",
-        productName: "Взуття"
-      }
-    ]
+    monthlyPlans: {},
+    firms: []
   },
   certificates: {
-    records: [
-      {
-        id: 101,
-        registrationNumber: "C-101",
-        expert: "Дан Т.О.",
-        status: "Проведено",
-        startDate: "2025-11-05",
-        endDate: "2025-11-06",
-        companyName: "ТОВ \"СЛІП АЙДІ УКРАЇНА\"",
-        comment: "сертифікат походження",
-        units: 2,
-        positions: 5,
-        urgency: false,
-        certificateForm: "СТ-1",
-        pages: 18,
-        additionalPages: 2,
-        productionType: "fully_produced",
-        certificateServiceType: "standard",
-        actNumber: "АКТ-C-101"
-      },
-      {
-        id: 102,
-        registrationNumber: "C-102",
-        expert: "Гомба Ю.В.",
-        status: "Не проведено",
-        startDate: "2025-11-07",
-        endDate: "2025-11-08",
-        companyName: "ТОВ \"Новітекс\"",
-        comment: "",
-        units: 1,
-        positions: 12,
-        urgency: true,
-        certificateForm: "А",
-        pages: 25,
-        additionalPages: 0,
-        productionType: "sufficient_processing",
-        certificateServiceType: "standard"
-      }
-    ],
+    records: [],
     costModelTable: [],
     generalSettings: {
       urgency: 150,
@@ -390,43 +72,8 @@ const initialAppData: AppData = {
       sufficientProcessing_plus201PagesCost: 1500,
       sufficientProcessing_additionalPositionCost: 85
     },
-    monthlyPlans: {
-      "2025-11": {
-        totalPlan: 50000,
-        expertPlans: [
-          {
-            id: 1,
-            name: "Дан Т.О.",
-            planAmount: "25000"
-          },
-          {
-            id: 2,
-            name: "Гомба Ю.В.",
-            planAmount: "25000"
-          }
-        ]
-      }
-    },
-    firms: [
-      {
-        id: 2,
-        name: "ТОВ \"СЛІП АЙДІ УКРАЇНА\"",
-        address: "М.ІРШАВА, ВУЛ. ГАГАРІНА , 49",
-        directorName: "Розентал Є.Г.",
-        edrpou: "23456789",
-        taxNumber: "234567890123",
-        productName: "Одяг"
-      },
-      {
-        id: 4,
-        name: "ТОВ \"Новітекс\"",
-        address: "м. Виноградів",
-        directorName: "Палчей Я.В.",
-        edrpou: "34514696",
-        taxNumber: "345146907052",
-        productName: "Шкіряні вироби"
-      }
-    ]
+    monthlyPlans: {},
+    firms: []
   }
 };
 
@@ -455,6 +102,13 @@ const App: React.FC = () => {
   const [selectedExpert, setSelectedExpert] = useState('all');
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  
+  const [editingActivity, setEditingActivity] = useState<EditingActivity[]>([]);
+  
+  // Ref to track if an update was initiated by the current client to prevent redundant saves/loops
+  const isRemoteUpdate = useRef(false);
+  // Ref to track if a modal is open (to pause aggressive syncs)
+  const isModalOpenRef = useRef(false);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
       setToast({ message, type });
@@ -478,58 +132,103 @@ const App: React.FC = () => {
   };
 
   // --- Data Persistence Logic ---
+  
+  // Helper to fetch data from server
+  const fetchDataFromServer = async (): Promise<AppData | null> => {
+      try {
+          const response = await fetch(API_URL);
+          if (response.ok) {
+              return await response.json();
+          }
+      } catch (error) {
+          console.warn('Server unreachable for data fetch', error);
+      }
+      return null;
+  };
+
+  // Initial Load
   useEffect(() => {
       const loadData = async () => {
-          try {
-              const response = await fetch(API_URL);
-              if (response.ok) {
-                  const serverData = await response.json();
-                  if (serverData && Object.keys(serverData).length > 0) {
-                      setAppData(serverData);
-                  } else {
-                       loadFromLocalStorage();
-                  }
-              } else {
-                  throw new Error('Server not reachable');
-              }
-          } catch (error) {
-              console.warn('Could not load from server, falling back to localStorage', error);
-              loadFromLocalStorage();
-          } finally {
-              setIsDataLoaded(true);
-          }
-      };
-
-      const loadFromLocalStorage = () => {
-           const savedData = localStorage.getItem('appData');
-           if (savedData) {
-               try {
-                   setAppData(JSON.parse(savedData));
-               } catch (e) {
-                   console.error('Failed to parse localStorage data', e);
+          const serverData = await fetchDataFromServer();
+          if (serverData && Object.keys(serverData).length > 0) {
+              isRemoteUpdate.current = true;
+              setAppData(serverData);
+          } else {
+               const savedData = localStorage.getItem('appData');
+               if (savedData) {
+                   try {
+                       setAppData(JSON.parse(savedData));
+                   } catch(e) { console.error(e); }
                }
-           }
+          }
+          setIsDataLoaded(true);
       };
-
       loadData();
   }, []);
 
+  // Auto-Sync / Polling
+  useEffect(() => {
+      if (!currentUser || !isDataLoaded) return;
+
+      const pollInterval = setInterval(async () => {
+          // Poll for active editing status
+          try {
+              const res = await fetch('/api/activity/focus');
+              if (res.ok) {
+                  const activity = await res.json();
+                  setEditingActivity(activity);
+              }
+          } catch (e) {}
+
+          // Poll for Data Updates
+          const serverData = await fetchDataFromServer();
+          if (serverData) {
+              // Cheap comparison: stringify
+              const currentString = JSON.stringify(appData);
+              const serverString = JSON.stringify(serverData);
+
+              if (currentString !== serverString) {
+                  if (!isModalOpenRef.current) {
+                      // Safe to update if no modal is open
+                      isRemoteUpdate.current = true;
+                      setAppData(serverData);
+                  } else {
+                      // Don't overwrite if user is editing, but maybe notify?
+                      // Optional: showToast('Дані оновлено на сервері', 'info');
+                  }
+              }
+          }
+      }, 4000); // Poll every 4 seconds
+
+      return () => clearInterval(pollInterval);
+  }, [currentUser, isDataLoaded, appData]);
+
+
+  // Save on Change (Debounced if needed, but effectively instant here)
   useEffect(() => {
       if (!isDataLoaded) return;
+      
+      // Save to LocalStorage always
       localStorage.setItem('appData', JSON.stringify(appData));
 
-      const saveDataToServer = async () => {
-          try {
-              await fetch(API_URL, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(appData),
-              });
-          } catch (error) {
-              // Silent fail
-          }
-      };
-      saveDataToServer();
+      // Save to Server ONLY if it's a local change
+      if (!isRemoteUpdate.current) {
+          const saveDataToServer = async () => {
+              try {
+                  await fetch(API_URL, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(appData),
+                  });
+              } catch (error) {
+                  // Silent fail
+              }
+          };
+          saveDataToServer();
+      } else {
+          // Reset flag after remote update is applied
+          isRemoteUpdate.current = false;
+      }
 
   }, [appData, isDataLoaded]);
 
@@ -657,13 +356,11 @@ const App: React.FC = () => {
                   const users = await response.json();
                   setActiveUsers(users);
               } else {
-                  // This will trigger the catch block in environments without a server
                   throw new Error('Server responded with non-OK status');
               }
           } catch (error) {
-              // Fallback for AI Studio or error cases: use empty list to avoid showing fake data
-              console.warn("Could not fetch active users.");
-              setActiveUsers([]);
+               console.warn("Could not fetch active users.");
+               setActiveUsers([]);
           }
       };
 
@@ -675,6 +372,25 @@ const App: React.FC = () => {
           clearInterval(fetchInterval);
       };
   }, [currentUser]);
+  
+  // Report Focus to Server
+  const reportFocus = async (recordId: number, isEditing: boolean) => {
+      if (!currentUser) return;
+      isModalOpenRef.current = isEditing; // Track modal state
+      try {
+          await fetch('/api/activity/focus', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ recordId, userFullName: currentUser.fullName, isEditing }),
+          });
+          // Refresh activity list immediately to reflect own action
+          const res = await fetch('/api/activity/focus');
+          if (res.ok) {
+              const activity = await res.json();
+              setEditingActivity(activity);
+          }
+      } catch (e) { console.error("Focus report failed", e); }
+  };
 
   // --- Import / Export Logic ---
   const importRecords = useCallback((file: File) => {
@@ -1005,6 +721,8 @@ const App: React.FC = () => {
                 onExportRecords={exportRecords}
                 currentUser={currentUser}
                 unprocessedCounts={unprocessedCountsForSnyetkov}
+                editingActivity={editingActivity}
+                onReportFocus={reportFocus}
               />
             </div>
           </>

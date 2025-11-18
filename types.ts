@@ -96,3 +96,9 @@ export interface CurrentUser {
   fullName: string;
   role: 'admin' | 'user';
 }
+
+export interface EditingActivity {
+    recordId: number;
+    userFullName: string;
+    timestamp: number;
+}
