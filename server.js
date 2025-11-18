@@ -59,7 +59,7 @@ async function ensureUsersTable() {
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 login TEXT UNIQUE NOT NULL,
-                fullName TEXT NOT NULL,
+                "fullName" TEXT NOT NULL,
                 password TEXT NOT NULL,
                 role TEXT NOT NULL DEFAULT 'user'
             );
@@ -68,7 +68,6 @@ async function ensureUsersTable() {
         const res = await client.query('SELECT 1 FROM users;');
         if (res.rowCount === 0) {
             console.log('Seeding users table...');
-            // In a real app, passwords should be hashed. Storing plain text as requested.
             const initialUsers = [
                 { login: 'admin', fullName: 'Адміністратор', password: 'Admin2025!', role: 'admin' },
                 { login: 'Gomba', fullName: 'Гомба Ю.В.', password: 'Gomba2025!', role: 'user' },
@@ -77,7 +76,7 @@ async function ensureUsersTable() {
             ];
             for (const user of initialUsers) {
                 await client.query(
-                    'INSERT INTO users (login, fullName, password, role) VALUES ($1, $2, $3, $4)',
+                    'INSERT INTO users (login, "fullName", password, role) VALUES ($1, $2, $3, $4)',
                     [user.login, user.fullName, user.password, user.role]
                 );
             }
@@ -90,8 +89,23 @@ async function ensureUsersTable() {
     }
 }
 
-// In-memory store for active users
-const activeUsers = new Map(); // Map<login, { lastSeen: number, fullName: string }>
+// Ensure the activity table exists
+async function ensureActivityTable() {
+    const client = await pool.connect();
+    try {
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS active_users (
+                login TEXT PRIMARY KEY,
+                "fullName" TEXT NOT NULL,
+                last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+    } catch (error) {
+        console.error('Error ensuring activity table exists:', error);
+    } finally {
+        client.release();
+    }
+}
 
 // --- Main Data API ---
 app.get('/api/data', async (req, res) => {
@@ -135,12 +149,11 @@ app.post('/api/login', async (req, res) => {
     }
     const client = await pool.connect();
     try {
-        const result = await client.query('SELECT id, login, fullName, password, role FROM users WHERE login = $1', [login]);
+        const result = await client.query('SELECT id, login, "fullName", password, role FROM users WHERE login = $1', [login]);
         if (result.rowCount === 0) {
             return res.status(401).json({ error: 'Неправильний логін або пароль' });
         }
         const user = result.rows[0];
-        // Plain text password comparison as requested
         if (user.password === password) {
             res.json({ success: true, user: { login: user.login, fullName: user.fullName, role: user.role } });
         } else {
@@ -154,11 +167,10 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// Get all users (admin only)
 app.get('/api/users', async (req, res) => {
     const client = await pool.connect();
     try {
-        const result = await client.query('SELECT id, login, fullName, password, role FROM users ORDER BY login ASC');
+        const result = await client.query('SELECT id, login, "fullName", password, role FROM users ORDER BY login ASC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch users' });
@@ -167,13 +179,12 @@ app.get('/api/users', async (req, res) => {
     }
 });
 
-// Add a user (admin only)
 app.post('/api/users', async (req, res) => {
     const { login, fullName, password, role } = req.body;
     const client = await pool.connect();
     try {
         const result = await client.query(
-            'INSERT INTO users (login, fullName, password, role) VALUES ($1, $2, $3, $4) RETURNING id, login, fullName, password, role',
+            'INSERT INTO users (login, "fullName", password, role) VALUES ($1, $2, $3, $4) RETURNING id, login, "fullName", password, role',
             [login, fullName, password, role]
         );
         res.status(201).json(result.rows[0]);
@@ -184,14 +195,13 @@ app.post('/api/users', async (req, res) => {
     }
 });
 
-// Update a user (admin only)
 app.put('/api/users/:id', async (req, res) => {
     const { id } = req.params;
     const { login, fullName, password, role } = req.body;
     const client = await pool.connect();
     try {
         const result = await client.query(
-            'UPDATE users SET login = $1, fullName = $2, password = $3, role = $4 WHERE id = $5 RETURNING id, login, fullName, password, role',
+            'UPDATE users SET login = $1, "fullName" = $2, password = $3, role = $4 WHERE id = $5 RETURNING id, login, "fullName", password, role',
             [login, fullName, password, role, id]
         );
         res.json(result.rows[0]);
@@ -202,7 +212,6 @@ app.put('/api/users/:id', async (req, res) => {
     }
 });
 
-// Delete a user (admin only)
 app.delete('/api/users/:id', async (req, res) => {
     const { id } = req.params;
     const client = await pool.connect();
@@ -217,36 +226,57 @@ app.delete('/api/users/:id', async (req, res) => {
 });
 
 // --- User Activity API ---
-app.post('/api/activity/heartbeat', (req, res) => {
+app.post('/api/activity/heartbeat', async (req, res) => {
     const { login, fullName } = req.body;
     if (login && fullName) {
-        activeUsers.set(login, { lastSeen: Date.now(), fullName });
-        res.status(200).json({ success: true });
+        const client = await pool.connect();
+        try {
+            await client.query(`
+                INSERT INTO active_users (login, "fullName", last_seen)
+                VALUES ($1, $2, NOW())
+                ON CONFLICT (login)
+                DO UPDATE SET last_seen = NOW(), "fullName" = $2;
+            `, [login, fullName]);
+            res.status(200).json({ success: true });
+        } catch (error) {
+            console.error('Heartbeat DB error:', error);
+            res.status(500).json({ error: 'Server error during heartbeat' });
+        } finally {
+            client.release();
+        }
     } else {
         res.status(400).json({ error: 'Login and fullName are required' });
     }
 });
 
-app.get('/api/activity/active-users', (req, res) => {
-    const now = Date.now();
-    const activeFullNames = [];
-    for (const [login, data] of activeUsers.entries()) {
-        if (now - data.lastSeen < 60000) { // Active within the last minute
-            activeFullNames.push(data.fullName);
-        }
+app.get('/api/activity/active-users', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT "fullName" FROM active_users WHERE last_seen > NOW() - INTERVAL '1 minute'`
+        );
+        const activeFullNames = result.rows.map(row => row.fullName);
+        res.json(activeFullNames);
+    } catch (error) {
+        console.error('Get active users DB error:', error);
+        res.status(500).json({ error: 'Server error getting active users' });
+    } finally {
+        client.release();
     }
-    res.json(activeFullNames);
 });
 
-// Cleanup inactive users periodically
-setInterval(() => {
-    const now = Date.now();
-    for (const [login, data] of activeUsers.entries()) {
-        if (now - data.lastSeen >= 60000) { // Inactive for a minute or more
-            activeUsers.delete(login);
-        }
+// Cleanup inactive users periodically from DB
+setInterval(async () => {
+    const client = await pool.connect();
+    try {
+        // Remove users not seen in the last 5 minutes
+        await client.query("DELETE FROM active_users WHERE last_seen < NOW() - INTERVAL '5 minutes'");
+    } catch (error) {
+        console.error('Error cleaning up inactive users:', error);
+    } finally {
+        client.release();
     }
-}, 30000); // Check every 30 seconds
+}, 60000); // Run every minute
 
 // The "catchall" handler: for any request that doesn't match one above,
 // send back React's index.html file.
@@ -257,5 +287,6 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
     ensureDbTable();
     ensureUsersTable();
+    ensureActivityTable();
     console.log(`Backend server running on http://localhost:${PORT}`);
 });
