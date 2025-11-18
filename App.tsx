@@ -661,9 +661,9 @@ const App: React.FC = () => {
                   throw new Error('Server responded with non-OK status');
               }
           } catch (error) {
-              // Fallback for AI Studio: if the fetch fails, use mock data.
-              console.warn("Could not fetch active users, using mock data for demonstration.");
-              setActiveUsers(['Дан Т.О.', 'admin', 'Снєтков С.Ю.', 'Гомба Ю.В.']);
+              // Fallback for AI Studio or error cases: use empty list to avoid showing fake data
+              console.warn("Could not fetch active users.");
+              setActiveUsers([]);
           }
       };
 
