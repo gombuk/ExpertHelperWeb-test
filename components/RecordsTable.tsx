@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef } from 'react';
 // FIX: Aliased Record to AppRecord to avoid conflict with the built-in Record type.
 import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings, CurrentUser, EditingActivity } from '../types';
@@ -6,7 +7,7 @@ import RecordInfoModal from './RecordInfoModal'; // Import the new component
 import { calculateCost } from '../utils/calculateCost';
 import type { AppMode } from '../App';
 // FIX: Corrected the import of generateOrderHtml, generateCertificateOrderHtml, and generateRecordsHtml.
-import { generateOrderHtml, generateCertificateOrderHtml, generateRecordsHtml, generateFirmsHtml, generateMonthlyReportHtml, generateJournalHtml } from '../utils/generateOrderHtml';
+import { generateOrderHtml, generateCertificateOrderHtml, generateCertificateActHtml, generateRecordsHtml, generateFirmsHtml, generateMonthlyReportHtml, generateJournalHtml } from '../utils/generateOrderHtml';
 import BulkDeleteModal from './BulkDeleteModal';
 
 
@@ -53,6 +54,12 @@ const DeleteIcon = () => (
 const PrintIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-700 dark:text-gray-200" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+    </svg>
+);
+
+const ActIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600 hover:text-green-800" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
 
@@ -245,6 +252,32 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
             newWindow.document.close();
         } else {
             showToast('Не вдалося відкрити нове вікно. Будь ласка, дозвольте спливаючі вікна для цього сайту.', 'error');
+        }
+    };
+
+    const handleGenerateCertificateAct = (record: AppRecord) => {
+        if (activeMode !== 'certificates') return;
+
+        let firm: Firm | undefined = firms.find(f => f.name === record.companyName);
+        if (!firm) {
+             firm = {
+                id: Date.now(),
+                name: record.companyName,
+                address: '—',
+                directorName: record.companyName,
+                edrpou: '—',
+                taxNumber: '—',
+                productName: ''
+            };
+        }
+
+        const actHtml = generateCertificateActHtml(record, firm, generalSettings);
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+            newWindow.document.write(actHtml);
+            newWindow.document.close();
+        } else {
+            showToast('Не вдалося відкрити нове вікно.', 'error');
         }
     };
 
@@ -668,6 +701,16 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                                             >
                                                 <PrintIcon />
                                             </button>
+                                            {activeMode === 'certificates' && (
+                                                <button 
+                                                    onClick={() => handleGenerateCertificateAct(record)} 
+                                                    title="Сформувати Акт" 
+                                                    className="focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    disabled={record.isQuickRegistration}
+                                                >
+                                                    <ActIcon />
+                                                </button>
+                                            )}
                                             <button onClick={() => handleOpenDeleteModal(record.id)} className="focus:outline-none" title="Видалити запис"><DeleteIcon /></button>
                                         </div>
                                     </td>

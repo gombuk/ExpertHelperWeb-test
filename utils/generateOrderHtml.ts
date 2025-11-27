@@ -1,3 +1,4 @@
+
 // FIX: Aliased Record to AppRecord to avoid conflict with the built-in Record type.
 import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings } from '../types';
 import { calculateCost } from './calculateCost'; // Import the calculateCost function
@@ -49,6 +50,85 @@ const formatDateForReport = (dateStr: string) => {
 
 const formatCurrencyForReport = (value: number) => {
     return new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+};
+
+const getUahText = (n: number): string => {
+    if (n % 100 >= 11 && n % 100 <= 19) return 'гривень';
+    if (n % 10 === 1) return 'гривня';
+    if (n % 10 >= 2 && n % 10 <= 4) return 'гривні';
+    return 'гривень';
+};
+
+const numberToWordsUa = (num: number): string => {
+    const units = ['', 'одна', 'дві', 'три', 'чотири', 'п\'ять', 'шість', 'сім', 'вісім', 'дев\'ять'];
+    const teens = ['десять', 'одинадцять', 'дванадцять', 'тринадцять', 'чотирнадцять', 'п\'ятнадцять', 'шістнадцять', 'сімнадцять', 'вісімнадцять', 'дев\'ятнадцять'];
+    const tens = ['', '', 'двадцять', 'тридцять', 'сорок', 'п\'ятдесят', 'шістдесят', 'сімдесят', 'вісімдесят', 'дев\'яносто'];
+    const hundreds = ['', 'сто', 'двісті', 'триста', 'чотириста', 'п\'ятсот', 'шістсот', 'сімсот', 'вісімсот', 'дев\'ятсот'];
+    const thousands = ['', 'тисяча', 'тисячі', 'тисяч'];
+    const millions = ['', 'мільйон', 'мільйони', 'мільйонів'];
+
+    if (num === 0) return 'нуль';
+
+    let str = '';
+    const integerPart = Math.floor(num);
+
+    const getTriad = (n: number, gender: 'fem' | 'masc') => {
+        let res = '';
+        const h = Math.floor(n / 100);
+        const t = Math.floor((n % 100) / 10);
+        const u = n % 10;
+
+        if (h > 0) res += hundreds[h] + ' ';
+
+        if (t === 1) {
+            res += teens[u] + ' ';
+        } else {
+            if (t > 1) res += tens[t] + ' ';
+            if (u > 0) {
+                if (gender === 'fem' && u <= 2) {
+                    res += (u === 1 ? 'одна' : 'дві') + ' ';
+                } else if (gender === 'masc' && u <= 2) {
+                     res += (u === 1 ? 'один' : 'два') + ' ';
+                } else {
+                    res += units[u] + ' ';
+                }
+            }
+        }
+        return res.trim();
+    };
+
+    const declension = (n: number, forms: string[]) => {
+        if (n % 100 >= 11 && n % 100 <= 19) return forms[2];
+        if (n % 10 === 1) return forms[0];
+        if (n % 10 >= 2 && n % 10 <= 4) return forms[1];
+        return forms[2];
+    };
+
+    const mils = Math.floor(integerPart / 1000000);
+    const ths = Math.floor((integerPart % 1000000) / 1000);
+    const rest = integerPart % 1000;
+
+    if (mils > 0) {
+        str += getTriad(mils, 'masc') + ' ' + declension(mils, millions) + ' ';
+    }
+    if (ths > 0) {
+        str += getTriad(ths, 'fem') + ' ' + declension(ths, thousands) + ' ';
+    }
+    if (rest > 0) {
+        str += getTriad(rest, 'fem') + ' ';
+    }
+
+    return str.trim();
+};
+
+const amountInWords = (amount: number): string => {
+    const integerPart = Math.floor(amount);
+    const fractionalPart = Math.round((amount - integerPart) * 100);
+    
+    const integerString = numberToWordsUa(integerPart);
+    const capitalizedIntegerString = integerString.charAt(0).toUpperCase() + integerString.slice(1);
+    
+    return `${capitalizedIntegerString} ${getUahText(integerPart)} ${String(fractionalPart).padStart(2, '0')} копійок`;
 };
 
 
@@ -1056,6 +1136,168 @@ export const generateCertificateOrderHtml = (record: AppRecord, firm: Firm, gene
                     </div>
                 </div>
                 <div class="mp-container">М.П.</div>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+};
+
+export const generateCertificateActHtml = (record: AppRecord, firm: Firm, generalSettings: GeneralSettings): string => {
+    const {
+        sumWithoutDiscount
+    } = calculateCost({
+        positions: record.positions,
+        urgency: record.urgency,
+        units: record.units,
+        pages: record.pages,
+        additionalPages: record.additionalPages,
+        productionType: record.productionType,
+        certificateServiceType: record.certificateServiceType,
+    }, [], generalSettings, 'certificates');
+
+    const vat = sumWithoutDiscount * 0.2;
+    const totalToPay = sumWithoutDiscount + vat;
+
+    const formatDateFull = (dateStr: string) => {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+        const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
+        const day = String(adjustedDate.getDate()).padStart(2, '0');
+        const monthNames = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+        const month = monthNames[adjustedDate.getMonth()];
+        const year = adjustedDate.getFullYear();
+        return `${day} ${month} ${year} р.`;
+    };
+
+    const formattedDate = formatDateFull(record.endDate);
+
+    const actContent = `
+        <div class="act-container">
+            <div class="act-header">
+                <strong>АКТ надання послуг</strong><br>
+                <strong>№ ${record.registrationNumber} від ${formattedDate}</strong>
+            </div>
+
+            <div class="act-body">
+                <div class="row">
+                    <div class="label">Виконавець:</div>
+                    <div class="value">Закарпатська торгово-промислова палата в особі президента Ковчара О.О., з однієї сторони, і</div>
+                </div>
+                <div class="row">
+                    <div class="label">Замовник:</div>
+                    <div class="value bold center-text"><strong>${firm.name}</strong></div>
+                </div>
+                 <div class="row">
+                    <div class="label">в особі</div>
+                    <div class="value underline-text">${firm.directorName}</div>
+                    <div class="label" style="white-space: nowrap;">, з іншої сторони,</div>
+                </div>
+                <div class="row">
+                    <div class="value">провели прийом-передачу наданих послуг: оформлення та засвідчення сертифікатів походження.</div>
+                </div>
+            </div>
+
+            <div class="calculations">
+                <div class="calc-row">
+                    <span class="calc-label">Вартість наданих <strong>Виконавцем</strong> послуг складає -</span>
+                    <span class="calc-value italic underline-text">${amountInWords(sumWithoutDiscount)}</span>
+                </div>
+                <div class="calc-row">
+                    <span class="calc-label">крім того ПДВ 20% -</span>
+                    <span class="calc-value italic underline-text">${amountInWords(vat)}</span>
+                </div>
+                <div class="calc-row">
+                    <span class="calc-label">Загальна вартість робіт (послуг) із ПДВ -</span>
+                    <span class="calc-value italic underline-text">${amountInWords(totalToPay)}</span>
+                </div>
+            </div>
+
+            <div class="disclaimer">
+                Претензій до якості та строків надання послуг Замовник не має.<br>
+                Цей акт є підставою для проведення розрахунків між Виконавцем і Замовником.
+            </div>
+
+            <div class="signatures">
+                <div class="col">
+                    <div class="sig-title">Від Виконавця здав:</div>
+                    <div class="sig-line">
+                         <span class="name italic"><strong>${record.expert}</strong></span>
+                    </div>
+                     <div class="mp">М.П.</div>
+                </div>
+                <div class="col right-col">
+                    <div class="sig-title">Від Замовника прийняв:</div>
+                    <div class="sig-line">
+                        <span class="name italic"><strong>${firm.directorName}</strong></span>
+                    </div>
+                     <div class="mp">М.П.</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return `
+    <!DOCTYPE html>
+    <html lang="uk">
+    <head>
+        <meta charset="UTF-8">
+        <title>Акт №${record.registrationNumber}</title>
+        <style>
+             @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+            body { font-family: 'Times New Roman', serif; font-size: 11pt; margin: 0; background: #fff; color: #000; }
+            .page-container { width: 21cm; margin: auto; padding: 1cm 1.5cm; box-sizing: border-box; }
+            .act-wrapper { margin-bottom: 50px; }
+            .act-header { font-size: 12pt; font-weight: bold; margin-bottom: 15px; }
+            .act-body { margin-bottom: 15px; line-height: 1.3; }
+            .row { display: flex; align-items: baseline; margin-bottom: 2px; flex-wrap: wrap; }
+            .label { font-weight: bold; margin-right: 5px; white-space: nowrap; }
+            .value { flex-grow: 1; }
+            .center-text { text-align: center; width: 100%; display: block; }
+            .underline-text { border-bottom: 1px solid #000; text-align: center; flex-grow: 1; padding: 0 5px; }
+            .bold { font-weight: bold; }
+            .italic { font-style: italic; }
+            
+            .calculations { margin-bottom: 15px; line-height: 1.4; }
+            .calc-row { display: flex; align-items: baseline; margin-bottom: 2px; }
+            .calc-label { white-space: nowrap; margin-right: 5px; }
+            .calc-value { border-bottom: 1px solid #000; flex-grow: 1; }
+
+            .disclaimer { margin-bottom: 20px; text-align: justify; }
+
+            .signatures { display: flex; justify-content: space-between; align-items: flex-start; }
+            .col { width: 45%; }
+            .sig-title { font-weight: bold; margin-bottom: 25px; }
+            .sig-line { border-bottom: 1px solid #000; margin-bottom: 5px; position: relative; height: 20px; display: flex; align-items: flex-end; justify-content: center; }
+            .name { font-size: 10pt; }
+            .mp { font-size: 10pt; margin-top: 5px; }
+            .right-col { text-align: right; }
+            .right-col .sig-title { text-align: left; padding-left: 20px; } /* Roughly align */
+             
+             .separator { border-top: 1px dashed #ccc; margin: 40px 0; }
+
+            .print-button { position: fixed; top: 10px; right: 10px; padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-family: sans-serif; }
+            @media print {
+                @page { size: A4; margin: 0; }
+                body { padding: 0; margin: 0; }
+                .page-container { width: 100%; padding: 1cm 2cm; }
+                .print-button { display: none; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="page-container">
+            <button class="print-button" onclick="window.print()">Роздрукувати</button>
+            
+            <div class="act-wrapper">
+                ${actContent}
+            </div>
+
+            <div class="separator"></div>
+
+            <div class="act-wrapper">
+                ${actContent}
             </div>
         </div>
     </body>
