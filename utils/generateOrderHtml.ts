@@ -52,71 +52,121 @@ const formatCurrencyForReport = (value: number) => {
     return new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 };
 
-const getUahText = (n: number): string => {
-    if (n % 100 >= 11 && n % 100 <= 19) return 'гривень';
-    if (n % 10 === 1) return 'гривня';
-    if (n % 10 >= 2 && n % 10 <= 4) return 'гривні';
-    return 'гривень';
-};
-
 const numberToWordsUa = (num: number): string => {
-    const units = ['', 'одна', 'дві', 'три', 'чотири', 'п\'ять', 'шість', 'сім', 'вісім', 'дев\'ять'];
-    const teens = ['десять', 'одинадцять', 'дванадцять', 'тринадцять', 'чотирнадцять', 'п\'ятнадцять', 'шістнадцять', 'сімнадцять', 'вісімнадцять', 'дев\'ятнадцять'];
-    const tens = ['', '', 'двадцять', 'тридцять', 'сорок', 'п\'ятдесят', 'шістдесят', 'сімдесят', 'вісімдесят', 'дев\'яносто'];
-    const hundreds = ['', 'сто', 'двісті', 'триста', 'чотириста', 'п\'ятсот', 'шістсот', 'сімсот', 'вісімсот', 'дев\'ятсот'];
-    const thousands = ['', 'тисяча', 'тисячі', 'тисяч'];
-    const millions = ['', 'мільйон', 'мільйони', 'мільйонів'];
+    const mapNumbers = {
+        0: ['нуль'],
+        1: ['один', 'одна'],
+        2: ['два', 'дві'],
+        3: ['три'],
+        4: ['чотири'],
+        5: ['п\'ять'],
+        6: ['шість'],
+        7: ['сім'],
+        8: ['вісім'],
+        9: ['дев\'ять'],
+        10: ['десять'],
+        11: ['одинадцять'],
+        12: ['дванадцять'],
+        13: ['тринадцять'],
+        14: ['чотирнадцять'],
+        15: ['п\'ятнадцять'],
+        16: ['шістнадцять'],
+        17: ['сімнадцять'],
+        18: ['вісімнадцять'],
+        19: ['дев\'ятнадцять'],
+        20: ['двадцять'],
+        30: ['тридцять'],
+        40: ['сорок'],
+        50: ['п\'ятдесят'],
+        60: ['шістдесят'],
+        70: ['сімдесят'],
+        80: ['вісімдесят'],
+        90: ['дев\'яносто'],
+        100: ['сто'],
+        200: ['двісті'],
+        300: ['триста'],
+        400: ['чотириста'],
+        500: ['п\'ятсот'],
+        600: ['шістсот'],
+        700: ['сімсот'],
+        800: ['вісімсот'],
+        900: ['дев\'ятсот']
+    };
+
+    const thousands = ['тисяча', 'тисячі', 'тисяч'];
+    const millions = ['мільйон', 'мільйони', 'мільйонів'];
+    const billions = ['мільярд', 'мільярди', 'мільярдів'];
 
     if (num === 0) return 'нуль';
 
     let str = '';
-    const integerPart = Math.floor(num);
+    
+    // Helper for declension
+    const morph = (n: number, forms: string[]) => {
+        const n10 = n % 10;
+        const n100 = n % 100;
+        if (n100 >= 11 && n100 <= 19) return forms[2];
+        if (n10 === 1) return forms[0];
+        if (n10 >= 2 && n10 <= 4) return forms[1];
+        return forms[2];
+    };
 
-    const getTriad = (n: number, gender: 'fem' | 'masc') => {
+    // Helper for 0-999
+    const getTriad = (n: number, genderIndex: number) => { 
+        // genderIndex: 0 = masc (default/millions), 1 = fem (thousands/hryvnia)
         let res = '';
         const h = Math.floor(n / 100);
-        const t = Math.floor((n % 100) / 10);
-        const u = n % 10;
+        const t = n % 100;
 
-        if (h > 0) res += hundreds[h] + ' ';
+        if (h > 0) res += mapNumbers[h * 100 as keyof typeof mapNumbers][0] + ' ';
 
-        if (t === 1) {
-            res += teens[u] + ' ';
-        } else {
-            if (t > 1) res += tens[t] + ' ';
-            if (u > 0) {
-                if (gender === 'fem' && u <= 2) {
-                    res += (u === 1 ? 'одна' : 'дві') + ' ';
-                } else if (gender === 'masc' && u <= 2) {
-                     res += (u === 1 ? 'один' : 'два') + ' ';
-                } else {
-                    res += units[u] + ' ';
+        if (t > 0) {
+            if (t < 20) {
+                 // For 1 and 2, verify gender. 
+                 // mapNumbers[1] -> ['один', 'одна']
+                 // mapNumbers[2] -> ['два', 'дві']
+                 const val = mapNumbers[t as keyof typeof mapNumbers];
+                 if (val.length > 1) {
+                     res += val[genderIndex] + ' ';
+                 } else {
+                     res += val[0] + ' ';
+                 }
+            } else {
+                const tens = Math.floor(t / 10) * 10;
+                const units = t % 10;
+                res += mapNumbers[tens as keyof typeof mapNumbers][0] + ' ';
+                if (units > 0) {
+                    const val = mapNumbers[units as keyof typeof mapNumbers];
+                    if (val.length > 1) {
+                        res += val[genderIndex] + ' ';
+                    } else {
+                        res += val[0] + ' ';
+                    }
                 }
             }
         }
         return res.trim();
     };
 
-    const declension = (n: number, forms: string[]) => {
-        if (n % 100 >= 11 && n % 100 <= 19) return forms[2];
-        if (n % 10 === 1) return forms[0];
-        if (n % 10 >= 2 && n % 10 <= 4) return forms[1];
-        return forms[2];
-    };
+    const integerPart = Math.floor(num);
+    
+    let remainder = integerPart;
+    
+    const bln = Math.floor(remainder / 1000000000);
+    remainder %= 1000000000;
+    
+    const mln = Math.floor(remainder / 1000000);
+    remainder %= 1000000;
+    
+    const ths = Math.floor(remainder / 1000);
+    remainder %= 1000;
+    
+    const rest = remainder;
 
-    const mils = Math.floor(integerPart / 1000000);
-    const ths = Math.floor((integerPart % 1000000) / 1000);
-    const rest = integerPart % 1000;
-
-    if (mils > 0) {
-        str += getTriad(mils, 'masc') + ' ' + declension(mils, millions) + ' ';
-    }
-    if (ths > 0) {
-        str += getTriad(ths, 'fem') + ' ' + declension(ths, thousands) + ' ';
-    }
-    if (rest > 0) {
-        str += getTriad(rest, 'fem') + ' ';
-    }
+    if (bln > 0) str += getTriad(bln, 0) + ' ' + morph(bln, billions) + ' ';
+    if (mln > 0) str += getTriad(mln, 0) + ' ' + morph(mln, millions) + ' ';
+    if (ths > 0) str += getTriad(ths, 1) + ' ' + morph(ths, thousands) + ' ';
+    if (rest > 0) str += getTriad(rest, 1) + ' '; // Using feminine for Hryvnia context by default
 
     return str.trim();
 };
@@ -128,6 +178,16 @@ const amountInWords = (amount: number): string => {
     const integerString = numberToWordsUa(integerPart);
     const capitalizedIntegerString = integerString.charAt(0).toUpperCase() + integerString.slice(1);
     
+    // Logic for currency declension
+    const getUahText = (n: number): string => {
+        const n100 = n % 100;
+        const n10 = n % 10;
+        if (n100 >= 11 && n100 <= 19) return 'гривень';
+        if (n10 === 1) return 'гривня';
+        if (n10 >= 2 && n10 <= 4) return 'гривні';
+        return 'гривень';
+    };
+
     return `${capitalizedIntegerString} ${getUahText(integerPart)} ${String(fractionalPart).padStart(2, '0')} копійок`;
 };
 
@@ -1177,7 +1237,7 @@ export const generateCertificateActHtml = (record: AppRecord, firm: Firm, genera
         <div class="act-container">
             <div class="act-header">
                 <strong>АКТ надання послуг</strong><br>
-                <strong>№ ${record.registrationNumber} від ${formattedDate}</strong>
+                <strong>№ ${record.actNumber || record.registrationNumber} від ${formattedDate}</strong>
             </div>
 
             <div class="act-body">
@@ -1223,7 +1283,7 @@ export const generateCertificateActHtml = (record: AppRecord, firm: Firm, genera
                 <div class="col">
                     <div class="sig-title">Від Виконавця здав:</div>
                     <div class="sig-line">
-                         <span class="name italic"><strong>${record.expert}</strong></span>
+                         <span class="name italic"><strong>Снєтков С.Ю.</strong></span>
                     </div>
                      <div class="mp">М.П.</div>
                 </div>
@@ -1243,7 +1303,7 @@ export const generateCertificateActHtml = (record: AppRecord, firm: Firm, genera
     <html lang="uk">
     <head>
         <meta charset="UTF-8">
-        <title>Акт №${record.registrationNumber}</title>
+        <title>Акт №${record.actNumber || record.registrationNumber}</title>
         <style>
              @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
             body { font-family: 'Times New Roman', serif; font-size: 11pt; margin: 0; background: #fff; color: #000; }
