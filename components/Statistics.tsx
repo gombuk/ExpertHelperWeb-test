@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import StatCard from './StatCard';
 import type { Record as AppRecord, CostModelRow, GeneralSettings, MonthlyPlan, CurrentUser } from '../types';
@@ -77,24 +78,21 @@ const Statistics: React.FC<StatisticsProps> = ({
     const notCompletedCount = records.filter(r => r.status === 'Не проведено').length;
 
     const totalCompletedOverall = records.reduce((acc, record) => {
-        if (record.status === 'Проведено') {
-            const costData = {
-                models: record.models,
-                positions: record.positions,
-                codes: record.codes,
-                complexity: record.complexity,
-                urgency: record.urgency,
-                discount: record.discount,
-                pages: record.pages,
-                units: record.units,
-                productionType: record.productionType,
-                certificateServiceType: record.certificateServiceType,
-                conclusionType: record.conclusionType,
-            };
-            const { sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
-            return acc + sumWithDiscount;
-        }
-        return acc;
+        const costData = {
+            models: record.models,
+            positions: record.positions,
+            codes: record.codes,
+            complexity: record.complexity,
+            urgency: record.urgency,
+            discount: record.discount,
+            pages: record.pages,
+            units: record.units,
+            productionType: record.productionType,
+            certificateServiceType: record.certificateServiceType,
+            conclusionType: record.conclusionType,
+        };
+        const { sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
+        return acc + sumWithDiscount;
     }, 0);
 
     const totalPlanPercentage = monthlyPlan.totalPlan > 0 ? Math.min((totalCompletedOverall / monthlyPlan.totalPlan) * 100, 100) : 0;
