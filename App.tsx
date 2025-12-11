@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import Header from './components/Header';
 import Statistics from './components/Statistics';
@@ -397,16 +398,28 @@ const App: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const importedData = JSON.parse(e.target?.result as string);
+        const content = e.target?.result as string;
+        if (!content) return;
+        
+        const importedData = JSON.parse(content);
         if (Array.isArray(importedData)) {
+          // CRITICAL FIX: Generate new unique IDs for imported records.
+          // This prevents key collisions in React which can cause freezes or missing updates,
+          // especially when importing previously exported data into existing lists.
+          const baseId = Date.now();
+          const recordsWithUniqueIds = importedData.map((record: any, index: number) => ({
+            ...record,
+            id: baseId + index + Math.floor(Math.random() * 1000) // Ensure uniqueness
+          }));
+
           setAppData(prevData => ({
             ...prevData,
             [activeMode]: {
               ...prevData[activeMode],
-              records: [...importedData, ...prevData[activeMode].records]
+              records: [...recordsWithUniqueIds, ...prevData[activeMode].records]
             }
           }));
-          showToast(`Успішно імпортовано ${importedData.length} записів.`);
+          showToast(`Успішно імпортовано ${recordsWithUniqueIds.length} записів.`);
         } else {
           showToast('Невірний формат файлу. Очікується масив записів.', 'error');
         }

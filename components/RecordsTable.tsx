@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 // FIX: Aliased Record to AppRecord to avoid conflict with the built-in Record type.
 import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings, CurrentUser, EditingActivity } from '../types';
 import RecordModal from './AddRecordModal';
@@ -87,6 +87,18 @@ const DownloadIcon = () => (
     </svg>
 );
 
+const ChevronLeftIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+);
+
+const ChevronRightIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+);
+
 
 const Tag: React.FC<{ text: string, color: 'orange' | 'red' | 'neutral' }> = ({ text, color }) => {
     const colorClasses = {
@@ -166,6 +178,15 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [exportStartDate, setExportStartDate] = useState('');
     const [exportEndDate, setExportEndDate] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
+    
+    // Reset pagination on filter change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeMode, selectedMonth, searchTerm]);
 
     
     const handleOpenAddModal = () => {
@@ -353,8 +374,18 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
         });
     }, [records, costModelTable, generalSettings, activeMode]);
 
+    const filteredRecords = useMemo(() => {
+        if (!searchTerm) return recordsWithCost;
+        const lowerTerm = searchTerm.toLowerCase();
+        return recordsWithCost.filter(r => 
+            r.companyName.toLowerCase().includes(lowerTerm) || 
+            r.registrationNumber.toLowerCase().includes(lowerTerm) ||
+            (r.comment && r.comment.toLowerCase().includes(lowerTerm))
+        );
+    }, [recordsWithCost, searchTerm]);
+
     const sortedRecords = useMemo(() => {
-        let sortableItems = [...recordsWithCost];
+        let sortableItems = [...filteredRecords];
         if (sortConfig !== null) {
             sortableItems.sort((a, b) => {
                 const aValue = a[sortConfig.key as keyof typeof a];
@@ -380,7 +411,18 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
             });
         }
         return sortableItems;
-    }, [recordsWithCost, sortConfig]);
+    }, [filteredRecords, sortConfig]);
+
+    // Pagination Logic
+    const totalPages = Math.ceil(sortedRecords.length / itemsPerPage);
+    const paginatedRecords = sortedRecords.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
+
 
     const requestSort = (key: string) => {
         let direction: 'ascending' | 'descending' = 'ascending';
@@ -513,6 +555,8 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                     <input 
                         type="text" 
                         placeholder="Пошук записів..." 
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
                         className="w-full lg:w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     />
                 </div>
@@ -622,7 +666,7 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                        {sortedRecords.map((record) => {
+                        {paginatedRecords.map((record) => {
                             const activeEditor = editingActivity.find(e => e.recordId === record.id && e.userFullName !== currentUser?.fullName);
                             const rowClass = activeEditor 
                                 ? 'bg-purple-50 border-2 border-purple-500 dark:bg-purple-900/30 dark:border-purple-500' 
@@ -720,6 +764,43 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                     </tbody>
                 </table>
             </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 dark:bg-gray-800 dark:border-gray-700">
+                    <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">
+                                Показано <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> до <span className="font-medium">{Math.min(currentPage * itemsPerPage, sortedRecords.length)}</span> із <span className="font-medium">{sortedRecords.length}</span> результатів
+                            </p>
+                        </div>
+                        <div>
+                            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed dark:ring-gray-600 dark:hover:bg-gray-700"
+                                >
+                                    <span className="sr-only">Попередня</span>
+                                    <ChevronLeftIcon />
+                                </button>
+                                <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 focus:outline-offset-0 dark:text-white dark:ring-gray-600">
+                                    Сторінка {currentPage} з {totalPages}
+                                </span>
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed dark:ring-gray-600 dark:hover:bg-gray-700"
+                                >
+                                    <span className="sr-only">Наступна</span>
+                                    <ChevronRightIcon />
+                                </button>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
         {modalMode && (
             <RecordModal
