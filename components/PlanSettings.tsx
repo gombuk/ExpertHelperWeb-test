@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { ExpertPlan, MonthlyPlan } from '../types';
 import type { View } from '../App';
@@ -32,17 +31,10 @@ const SaveIcon = () => (
 const PlanSettings: React.FC<PlanSettingsProps> = ({ setCurrentView, monthlyPlans, setMonthlyPlans, showToast }) => {
     const [selectedMonth, setSelectedMonth] = useState(() => {
         const months = Object.keys(monthlyPlans).sort((a, b) => b.localeCompare(a));
+        // Default to the latest plan month, or current month if no plans exist
         return months.length > 0 ? months[0] : new Date().toISOString().slice(0, 7);
     });
     const [newExpertName, setNewExpertName] = useState('');
-
-    useEffect(() => {
-        if (Object.keys(monthlyPlans).length > 0 && !monthlyPlans[selectedMonth]) {
-            const months = Object.keys(monthlyPlans).sort((a, b) => b.localeCompare(a));
-            setSelectedMonth(months[0]);
-        }
-    }, [monthlyPlans, selectedMonth]);
-
 
     const currentPlan = monthlyPlans[selectedMonth] || { totalPlan: 0, expertPlans: [] };
 
