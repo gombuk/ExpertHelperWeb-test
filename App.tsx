@@ -501,13 +501,32 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const allMonths = new Set<string>();
+    
+    // Add months from Plans
     Object.keys(appData.conclusions.monthlyPlans).forEach(month => allMonths.add(month));
     Object.keys(appData.certificates.monthlyPlans).forEach(month => allMonths.add(month));
+
+    // Add months from Records (to ensure months with records but no plan are selectable)
+    appData.conclusions.records.forEach(r => {
+        if (r.endDate && r.endDate.length >= 7) allMonths.add(r.endDate.substring(0, 7));
+    });
+    appData.certificates.records.forEach(r => {
+        if (r.endDate && r.endDate.length >= 7) allMonths.add(r.endDate.substring(0, 7));
+    });
+
+    // Ensure the current user-selected month is considered "valid" to prevent auto-switching
+    if (selectedMonth) {
+        allMonths.add(selectedMonth);
+    }
+
     const sortedMonths = Array.from(allMonths).sort((a, b) => b.localeCompare(a));
     
-    if (sortedMonths.length > 0 && !sortedMonths.includes(selectedMonth)) {
+    // Only auto-switch if we have data AND the current selection is completely invalid/empty
+    // The previous logic `!sortedMonths.includes(selectedMonth)` was too aggressive because
+    // it didn't account for months that exist in records but not in plans.
+    if (sortedMonths.length > 0 && !selectedMonth) {
       setSelectedMonth(sortedMonths[0]);
-    } else if (sortedMonths.length === 0) {
+    } else if (sortedMonths.length === 0 && !selectedMonth) {
       setSelectedMonth(new Date().toISOString().slice(0, 7));
     }
   }, [appData, selectedMonth]);
