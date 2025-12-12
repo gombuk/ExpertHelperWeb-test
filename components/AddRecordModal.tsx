@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 // FIX: Aliased Record to AppRecord to avoid conflict with the built-in Record type.
 import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings } from '../types';
@@ -489,6 +490,27 @@ const RecordModal: React.FC<RecordModalProps> = ({
                         )}
                     </div>
                     
+                    <div className="flex items-center space-x-6 pt-4">
+                        {activeMode === 'conclusions' && formState.conclusionType === 'standard' && (
+                             <>
+                                <div className="flex items-center">
+                                    <input type="checkbox" id="complexity" name="complexity" checked={formState.complexity} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
+                                    <label htmlFor="complexity" className="ml-2 block text-sm text-gray-900 dark:text-white">Складний</label>
+                                </div>
+                                 <div className="flex items-center">
+                                    <input type="checkbox" id="urgency" name="urgency" checked={formState.urgency} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
+                                    <label htmlFor="urgency" className="ml-2 block text-sm text-gray-900 dark:text-white">Терміновий</label>
+                                </div>
+                            </>
+                        )}
+                         {activeMode === 'certificates' && (
+                            <div className="flex items-center">
+                               <input type="checkbox" id="urgency" name="urgency" checked={formState.urgency} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
+                               <label htmlFor="urgency" className="ml-2 block text-sm text-gray-900 dark:text-white">Терміновий</label>
+                            </div>
+                        )}
+                    </div>
+
                     {formState.conclusionType !== 'custom_cost' && (
                     <div className="pt-4">
                         <button type="button" onClick={handleCalculate} className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
@@ -542,27 +564,6 @@ const RecordModal: React.FC<RecordModalProps> = ({
                     <div>
                          <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Коментар</label>
                          <textarea name="comment" value={formState.comment || ''} onChange={handleInputChange} rows={3} className="input-field dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
-                    </div>
-
-                    <div className="flex items-center space-x-6">
-                        {activeMode === 'conclusions' && formState.conclusionType === 'standard' && (
-                             <>
-                                <div className="flex items-center">
-                                    <input type="checkbox" id="complexity" name="complexity" checked={formState.complexity} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
-                                    <label htmlFor="complexity" className="ml-2 block text-sm text-gray-900 dark:text-white">Складний</label>
-                                </div>
-                                 <div className="flex items-center">
-                                    <input type="checkbox" id="urgency" name="urgency" checked={formState.urgency} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
-                                    <label htmlFor="urgency" className="ml-2 block text-sm text-gray-900 dark:text-white">Терміновий</label>
-                                </div>
-                            </>
-                        )}
-                         {activeMode === 'certificates' && (
-                            <div className="flex items-center">
-                               <input type="checkbox" id="urgency" name="urgency" checked={formState.urgency} onChange={handleInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700" />
-                               <label htmlFor="urgency" className="ml-2 block text-sm text-gray-900 dark:text-white">Терміновий</label>
-                            </div>
-                        )}
                     </div>
                     </>
                     )}
