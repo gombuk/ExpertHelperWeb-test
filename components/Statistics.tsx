@@ -62,6 +62,7 @@ const Statistics: React.FC<StatisticsProps> = ({
                 productionType: record.productionType,
                 certificateServiceType: record.certificateServiceType,
                 conclusionType: record.conclusionType,
+                customCost: record.customCost,
             };
             const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
             acc.totalWithoutDiscount += sumWithoutDiscount;
@@ -90,6 +91,7 @@ const Statistics: React.FC<StatisticsProps> = ({
             productionType: record.productionType,
             certificateServiceType: record.certificateServiceType,
             conclusionType: record.conclusionType,
+            customCost: record.customCost,
         };
         const { sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
         return acc + sumWithDiscount;
@@ -202,6 +204,7 @@ const Statistics: React.FC<StatisticsProps> = ({
                                 productionType: record.productionType,
                                 certificateServiceType: record.certificateServiceType,
                                 conclusionType: record.conclusionType,
+                                customCost: record.customCost,
                              };
                               const { sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
                               return acc + sumWithDiscount;
