@@ -45,12 +45,10 @@ const CERTIFICATES_MAPPING = {
     status: 'СТАТУС'
 };
 
-const SHEET_ID = '109egQoJF8oTBliTBemoJVenje3FhLFhhihy1R_Xjcao';
-
 async function getDoc() {
     // These ENVs must be set in Render
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-        console.warn('Google Credentials not found in environment variables.');
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_SHEET_ID) {
+        console.warn('Google Credentials (EMAIL, KEY, or SHEET_ID) not found in environment variables.');
         return null;
     }
 
@@ -60,9 +58,14 @@ async function getDoc() {
         scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
-    const doc = new GoogleSpreadsheet(SHEET_ID, serviceAccountAuth);
-    await doc.loadInfo();
-    return doc;
+    try {
+        const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
+        await doc.loadInfo();
+        return doc;
+    } catch (e) {
+        console.error("Error loading Google Sheet:", e);
+        return null;
+    }
 }
 
 // --- Export: App -> Google Sheets ---
@@ -70,16 +73,20 @@ export async function exportToGoogleSheets(appData) {
     const doc = await getDoc();
     if (!doc) return;
 
-    // 1. Sync Conclusions
-    const conclusionSheet = doc.sheetsByTitle['Експертні висновки'];
-    if (conclusionSheet && appData.conclusions?.records) {
-        await syncSheet(conclusionSheet, appData.conclusions.records, CONCLUSIONS_MAPPING);
-    }
+    try {
+        // 1. Sync Conclusions
+        const conclusionSheet = doc.sheetsByTitle['Експертні висновки'];
+        if (conclusionSheet && appData.conclusions?.records) {
+            await syncSheet(conclusionSheet, appData.conclusions.records, CONCLUSIONS_MAPPING);
+        }
 
-    // 2. Sync Certificates
-    const certificateSheet = doc.sheetsByTitle['Сертифікати'];
-    if (certificateSheet && appData.certificates?.records) {
-        await syncSheet(certificateSheet, appData.certificates.records, CERTIFICATES_MAPPING);
+        // 2. Sync Certificates
+        const certificateSheet = doc.sheetsByTitle['Сертифікати'];
+        if (certificateSheet && appData.certificates?.records) {
+            await syncSheet(certificateSheet, appData.certificates.records, CERTIFICATES_MAPPING);
+        }
+    } catch (e) {
+        console.error("Export failed:", e);
     }
 }
 
@@ -125,24 +132,32 @@ async function syncSheet(sheet, records, mapping) {
 // --- Import: Google Sheets -> App ---
 export async function importFromGoogleSheets(currentAppData) {
     const doc = await getDoc();
-    if (!doc) return null;
+    if (!doc) {
+        console.warn("Could not load Google Doc for import.");
+        return null;
+    }
 
     const newAppData = JSON.parse(JSON.stringify(currentAppData)); 
 
-    // 1. Import Conclusions
-    const conclusionSheet = doc.sheetsByTitle['Експертні висновки'];
-    if (conclusionSheet) {
-        const rows = await conclusionSheet.getRows();
-        const records = rows.map(row => mapRowToRecord(row, CONCLUSIONS_MAPPING));
-        newAppData.conclusions.records = records;
-    }
+    try {
+        // 1. Import Conclusions
+        const conclusionSheet = doc.sheetsByTitle['Експертні висновки'];
+        if (conclusionSheet) {
+            const rows = await conclusionSheet.getRows();
+            const records = rows.map(row => mapRowToRecord(row, CONCLUSIONS_MAPPING));
+            newAppData.conclusions.records = records;
+        }
 
-    // 2. Import Certificates
-    const certificateSheet = doc.sheetsByTitle['Сертифікати'];
-    if (certificateSheet) {
-        const rows = await certificateSheet.getRows();
-        const records = rows.map(row => mapRowToRecord(row, CERTIFICATES_MAPPING));
-        newAppData.certificates.records = records;
+        // 2. Import Certificates
+        const certificateSheet = doc.sheetsByTitle['Сертифікати'];
+        if (certificateSheet) {
+            const rows = await certificateSheet.getRows();
+            const records = rows.map(row => mapRowToRecord(row, CERTIFICATES_MAPPING));
+            newAppData.certificates.records = records;
+        }
+    } catch (e) {
+        console.error("Import failed:", e);
+        return null;
     }
 
     return newAppData;
