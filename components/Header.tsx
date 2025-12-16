@@ -74,13 +74,18 @@ const Header: React.FC<HeaderProps> = ({ setCurrentView, activeMode, setActiveMo
     const handleSync = async () => {
         setIsSyncing(true);
         try {
-            await fetch('/api/sync/google-import', { method: 'POST' });
-            // Ideally, we'd trigger a reload of data in App.tsx, but since App.tsx polls every 4 seconds,
-            // the data will update automatically shortly.
-            alert('Синхронізацію успішно запущено. Дані оновляться протягом кількох секунд.');
+            const res = await fetch('/api/sync/google-import', { method: 'POST' });
+            const data = await res.json();
+            
+            if (res.ok) {
+                alert('Синхронізацію успішно запущено. Дані оновляться протягом кількох секунд.');
+            } else {
+                // Show the specific error from the server (e.g. Missing Tab or Auth error)
+                alert(`Помилка синхронізації: ${data.error}`);
+            }
         } catch (e) {
             console.error(e);
-            alert('Помилка синхронізації.');
+            alert('Не вдалося з\'єднатися з сервером для синхронізації.');
         } finally {
             setIsSyncing(false);
         }
