@@ -416,7 +416,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, async () => {
-    console.log(`Backend server starting on port ${PORT}...`);
+    console.log(`Backend server starting on port ${PORT}... (v0.0.2)`);
     await ensureDbTable();
     await ensureUsersTable();
     await ensureActivityTable();
