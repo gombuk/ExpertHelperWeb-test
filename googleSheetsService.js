@@ -99,6 +99,21 @@ function getActiveHeader(sheet, headerKeys) {
     return headerKeys[0];
 }
 
+// Helper to normalize date from DD.MM.YYYY to YYYY-MM-DD
+function normalizeDate(dateStr) {
+    if (!dateStr) return '';
+    const cleanStr = String(dateStr).trim();
+    // Regex for DD.MM.YYYY or D.M.YYYY
+    const match = cleanStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (match) {
+        const day = match[1].padStart(2, '0');
+        const month = match[2].padStart(2, '0');
+        const year = match[3];
+        return `${year}-${month}-${day}`;
+    }
+    return cleanStr;
+}
+
 // --- Export: App -> Google Sheets ---
 export async function exportToGoogleSheets(appData) {
     try {
@@ -140,6 +155,10 @@ async function syncSheet(sheet, records, mapping) {
             let value = record[key];
             if (typeof value === 'boolean') value = value ? 'так' : 'ні'; // Lowercase 'так'/'ні' matches screenshot style
             if (value === undefined || value === null) value = '';
+            
+            // If exporting dates, ensure they might need to be DD.MM.YYYY for sheets, 
+            // but usually ISO is fine or Sheet handles format. 
+            // For now, we write what we have (YYYY-MM-DD from app).
             
             rowData[activeHeader] = value;
         }
@@ -228,6 +247,9 @@ function mapRowToRecord(row, mapping) {
         } else if (key === 'complexity' || key === 'urgency') {
             const strVal = String(value).toLowerCase().trim();
             record[key] = (strVal === 'так' || strVal === 'true' || strVal === 'yes' || strVal === '+');
+        } else if (key === 'startDate' || key === 'endDate') {
+            // Normalize dates to YYYY-MM-DD
+            record[key] = normalizeDate(value);
         } else {
             record[key] = value || '';
         }
