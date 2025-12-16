@@ -84,11 +84,9 @@ async function ensureUsersTable() {
 
         // 2. MIGRATION FIX: Check if column "fullName" exists (from old versions) and rename it to fullname
         try {
-             // Attempt to rename. If column "fullName" doesn't exist, this throws harmless error.
              await client.query('ALTER TABLE users RENAME COLUMN "fullName" TO fullname');
-             console.log('Schema migration: Renamed "fullName" to fullname');
         } catch (e) {
-            // Ignore error, likely means column is already correct or table didn't have it
+            // Ignore error
         }
         
         // 3. Seed if empty
@@ -219,7 +217,6 @@ app.post('/api/login', async (req, res) => {
     let client;
     try {
         client = await pool.connect();
-        // Use lowercase column names
         const result = await client.query('SELECT id, login, fullname, password, role FROM users WHERE login = $1', [login]);
         
         if (result.rowCount === 0) {
@@ -227,7 +224,6 @@ app.post('/api/login', async (req, res) => {
         }
         const user = result.rows[0];
         if (user.password === password) {
-            // Map lowercase 'fullname' from DB to 'fullName' for frontend
             res.json({ success: true, user: { login: user.login, fullName: user.fullname, role: user.role } });
         } else {
             res.status(401).json({ error: 'Неправильний логін або пароль' });
@@ -245,7 +241,6 @@ app.get('/api/users', async (req, res) => {
     try {
         client = await pool.connect();
         const result = await client.query('SELECT id, login, fullname, password, role FROM users ORDER BY login ASC');
-        // Map db rows to frontend structure
         const users = result.rows.map(row => ({
             id: row.id,
             login: row.login,
@@ -360,7 +355,6 @@ app.get('/api/activity/active-users', async (req, res) => {
         const result = await client.query(
             `SELECT fullname FROM active_users WHERE last_seen > NOW() - INTERVAL '1 minute'`
         );
-        // Map rows back to simple array of names
         const activeFullNames = result.rows.map(row => row.fullname);
         res.json(activeFullNames);
     } catch (error) {
@@ -372,7 +366,6 @@ app.get('/api/activity/active-users', async (req, res) => {
 });
 
 // --- Record Editing Focus API (In-Memory) ---
-// Store: recordId -> { userFullName, timestamp }
 const editingRecords = new Map();
 
 app.post('/api/activity/focus', (req, res) => {
@@ -382,7 +375,6 @@ app.post('/api/activity/focus', (req, res) => {
     if (isEditing) {
         editingRecords.set(recordId, { userFullName, timestamp: Date.now() });
     } else {
-        // Only remove if it's the same user (prevent clearing someone else's focus)
         const current = editingRecords.get(recordId);
         if (current && current.userFullName === userFullName) {
             editingRecords.delete(recordId);
@@ -392,15 +384,12 @@ app.post('/api/activity/focus', (req, res) => {
 });
 
 app.get('/api/activity/focus', (req, res) => {
-    // Cleanup stale locks (> 5 mins)
     const now = Date.now();
     for (const [id, data] of editingRecords.entries()) {
         if (now - data.timestamp > 300000) {
             editingRecords.delete(id);
         }
     }
-    
-    // Convert Map to Array for JSON
     const activityList = Array.from(editingRecords.entries()).map(([id, data]) => ({
         recordId: Number(id),
         userFullName: data.userFullName,
@@ -410,29 +399,24 @@ app.get('/api/activity/focus', (req, res) => {
 });
 
 
-// Cleanup inactive users periodically from DB
 setInterval(async () => {
     let client;
     try {
         client = await pool.connect();
-        // Remove users not seen in the last 5 minutes
         await client.query("DELETE FROM active_users WHERE last_seen < NOW() - INTERVAL '5 minutes'");
     } catch (error) {
         console.error('Error cleaning up inactive users:', error);
     } finally {
         safeRelease(client);
     }
-}, 60000); // Run every minute
+}, 60000);
 
-// The "catchall" handler: for any request that doesn't match one above,
-// send back React's index.html file.
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, async () => {
     console.log(`Backend server starting on port ${PORT}...`);
-    // These run on startup. Using await ensures we don't start taking requests until DB is ready-ish.
     await ensureDbTable();
     await ensureUsersTable();
     await ensureActivityTable();

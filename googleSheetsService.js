@@ -22,7 +22,6 @@ const CONCLUSIONS_MAPPING = {
     conclusionType: 'ТАРИФ',
     expert: "ІМ'Я ЕКСПЕРТА",
     status: 'СТАТУС',
-    // Costs are calculated on the fly usually, but we can store customCost
     customCost: 'ВАРТІСТЬ (ВРУЧНУ)'
 };
 
@@ -89,10 +88,9 @@ async function syncSheet(sheet, records, mapping) {
     
     // Convert app records to row objects
     const rowsToAdd = [];
-    const rowsToUpdate = []; // Array of { row, updates }
+    const rowsToUpdate = []; 
 
     for (const record of records) {
-        // Prepare row data based on mapping
         const rowData = {};
         for (const [key, header] of Object.entries(mapping)) {
             let value = record[key];
@@ -101,14 +99,11 @@ async function syncSheet(sheet, records, mapping) {
             rowData[header] = value;
         }
 
-        // Find existing row by ID
         const existingRow = rows.find(r => r.get('ID') == record.id);
         
         if (existingRow) {
-            // Update existing
             let hasChanges = false;
             for (const header of Object.values(mapping)) {
-                // loose comparison for string/number diffs
                 if (existingRow.get(header) != rowData[header]) {
                     existingRow.assign({ [header]: rowData[header] });
                     hasChanges = true;
@@ -116,19 +111,14 @@ async function syncSheet(sheet, records, mapping) {
             }
             if (hasChanges) rowsToUpdate.push(existingRow);
         } else {
-            // Create new
             rowsToAdd.push(rowData);
         }
     }
 
-    // Batch operations
     if (rowsToAdd.length > 0) {
         await sheet.addRows(rowsToAdd);
     }
     
-    // Save updates
-    // Note: google-spreadsheet doesn't have a bulk update for separate rows easily, 
-    // but we can save them in parallel.
     await Promise.all(rowsToUpdate.map(row => row.save()));
 }
 
@@ -137,16 +127,13 @@ export async function importFromGoogleSheets(currentAppData) {
     const doc = await getDoc();
     if (!doc) return null;
 
-    const newAppData = JSON.parse(JSON.stringify(currentAppData)); // Deep copy
+    const newAppData = JSON.parse(JSON.stringify(currentAppData)); 
 
     // 1. Import Conclusions
     const conclusionSheet = doc.sheetsByTitle['Експертні висновки'];
     if (conclusionSheet) {
         const rows = await conclusionSheet.getRows();
         const records = rows.map(row => mapRowToRecord(row, CONCLUSIONS_MAPPING));
-        // Merge strategy: We assume Google Sheet has the "truth" for rows that exist there.
-        // However, we need to preserve full app data structure.
-        // Simplest strategy: Replace records with what's in the sheet, ensuring types are correct.
         newAppData.conclusions.records = records;
     }
 
@@ -166,7 +153,6 @@ function mapRowToRecord(row, mapping) {
     for (const [key, header] of Object.entries(mapping)) {
         const value = row.get(header);
         
-        // Type casting
         if (key === 'id' || key === 'units' || key === 'models' || key === 'positions' || 
             key === 'pages' || key === 'codes' || key === 'additionalPages' || key === 'customCost') {
             record[key] = Number(value) || 0;
@@ -177,7 +163,6 @@ function mapRowToRecord(row, mapping) {
         }
     }
     
-    // Ensure essential fields exist even if empty in sheet
     if (!record.status) record.status = 'Не проведено';
     
     return record;
