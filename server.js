@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
@@ -5,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
 import dotenv from 'dotenv';
+import { exportToGoogleSheets, importFromGoogleSheets } from './googleSheetsService.js';
 
 // Load environment variables from .env file for local development
 dotenv.config();
@@ -160,6 +162,10 @@ app.post('/api/data', async (req, res) => {
             ON CONFLICT (id) 
             DO UPDATE SET data = $1;
         `, [dataToSave]);
+        
+        // Non-blocking sync to Google Sheets
+        exportToGoogleSheets(req.body).catch(err => console.error("Auto-sync to Google failed:", err));
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error writing to DB:', error);
@@ -168,6 +174,40 @@ app.post('/api/data', async (req, res) => {
         safeRelease(client);
     }
 });
+
+// --- Google Sheets Sync Endpoint (Manual Pull) ---
+app.post('/api/sync/google-import', async (req, res) => {
+    let client;
+    try {
+        // 1. Get current data from DB
+        client = await pool.connect();
+        const result = await client.query('SELECT data FROM app_data WHERE id = 1;');
+        const currentData = result.rows[0]?.data || {};
+
+        // 2. Fetch data from Google Sheets
+        const newData = await importFromGoogleSheets(currentData);
+
+        if (!newData) {
+            return res.status(500).json({ error: 'Failed to fetch from Google Sheets. Check server logs.' });
+        }
+
+        // 3. Save merged data back to DB
+        await client.query(`
+            INSERT INTO app_data (id, data) 
+            VALUES (1, $1) 
+            ON CONFLICT (id) 
+            DO UPDATE SET data = $1;
+        `, [JSON.stringify(newData)]);
+
+        res.json({ success: true, data: newData });
+    } catch (error) {
+        console.error('Sync error:', error);
+        res.status(500).json({ error: 'Sync failed' });
+    } finally {
+        safeRelease(client);
+    }
+});
+
 
 // --- User & Auth API ---
 

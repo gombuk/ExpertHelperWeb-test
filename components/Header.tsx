@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { View, AppMode } from '../App';
 import { Theme, CurrentUser } from '../types';
 
@@ -45,6 +46,12 @@ const LogoutIcon = () => (
     </svg>
 );
 
+const SyncIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+);
+
 interface HeaderProps {
     setCurrentView: (view: View) => void;
     activeMode: AppMode;
@@ -57,11 +64,27 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ setCurrentView, activeMode, setActiveMode, theme, toggleTheme, currentUser, onLogout, activeUsers }) => {
-    
+    const [isSyncing, setIsSyncing] = useState(false);
+
     const baseButtonClass = "px-4 py-2 text-sm font-semibold rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500";
     const activeConclusionClass = activeMode === 'conclusions' ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-100 hover:dark:bg-gray-500";
     const activeSertifikatClass = activeMode === 'certificates' ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-100 hover:dark:bg-gray-500";
     const otherActiveUsers = currentUser ? activeUsers.filter(u => u !== currentUser.fullName) : [];
+
+    const handleSync = async () => {
+        setIsSyncing(true);
+        try {
+            await fetch('/api/sync/google-import', { method: 'POST' });
+            // Ideally, we'd trigger a reload of data in App.tsx, but since App.tsx polls every 4 seconds,
+            // the data will update automatically shortly.
+            alert('Синхронізацію успішно запущено. Дані оновляться протягом кількох секунд.');
+        } catch (e) {
+            console.error(e);
+            alert('Помилка синхронізації.');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     return (
         <header className="flex flex-col justify-between items-start">
@@ -139,6 +162,14 @@ const Header: React.FC<HeaderProps> = ({ setCurrentView, activeMode, setActiveMo
                         className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors dark:text-gray-100 dark:bg-gray-600 hover:dark:bg-gray-500">
                         <SettingsIcon />
                         Налаштування
+                    </button>
+                    <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className={`flex items-center p-2 rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300 transition-colors dark:text-gray-100 dark:bg-gray-600 hover:dark:bg-gray-500 ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        title="Синхронізувати з Google Таблицею"
+                    >
+                        <SyncIcon />
                     </button>
                     <button
                         onClick={toggleTheme}
