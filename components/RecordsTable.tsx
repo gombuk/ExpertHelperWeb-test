@@ -1,15 +1,12 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-// FIX: Aliased Record to AppRecord to avoid conflict with the built-in Record type.
-import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings, CurrentUser, EditingActivity } from '../types';
+import type { Record as AppRecord, Firm, YearSettings, CurrentUser, EditingActivity } from '../types';
 import RecordModal from './AddRecordModal';
-import RecordInfoModal from './RecordInfoModal'; // Import the new component
+import RecordInfoModal from './RecordInfoModal';
 import { calculateCost } from '../utils/calculateCost';
 import type { AppMode } from '../App';
-// FIX: Corrected the import of generateOrderHtml, generateCertificateOrderHtml, and generateRecordsHtml.
-import { generateOrderHtml, generateCertificateOrderHtml, generateCertificateActHtml, generateRecordsHtml, generateFirmsHtml, generateMonthlyReportHtml, generateJournalHtml } from '../utils/generateOrderHtml';
+import { generateOrderHtml, generateCertificateOrderHtml, generateCertificateActHtml, generateRecordsHtml, generateMonthlyReportHtml, generateJournalHtml } from '../utils/generateOrderHtml';
 import BulkDeleteModal from './BulkDeleteModal';
-
 
 interface RecordsTableProps {
     records: AppRecord[];
@@ -20,15 +17,13 @@ interface RecordsTableProps {
     onDeleteMultipleRecords: (ids: number[]) => void;
     firms: Firm[];
     experts: string[];
-    costModelTable: CostModelRow[];
-    generalSettings: GeneralSettings;
+    yearlySettings: Record<string, YearSettings>;
     showToast: (message: string, type?: 'success' | 'error') => void;
     activeMode: AppMode;
-    selectedMonth: string; // Add selectedMonth prop
+    selectedMonth: string;
     onImportRecords: (file: File) => void;
     onExportRecords: (startDate?: string, endDate?: string) => void;
     currentUser: CurrentUser | null;
-    unprocessedCounts: { conclusions: number; certificates: number };
     editingActivity?: EditingActivity[];
     onReportFocus?: (recordId: number, isEditing: boolean) => void;
 }
@@ -101,51 +96,20 @@ const ChevronRightIcon = () => (
 
 
 const Tag: React.FC<{ text: string, color: 'orange' | 'red' | 'neutral' }> = ({ text, color }) => {
-    const colorClasses = {
-        orange: 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100',
-        red: 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100',
-        neutral: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-    }[color];
-    
-    return (
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClasses}`}>
-            {text}
-        </span>
-    );
+    const colorClasses = { orange: 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100', red: 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100', neutral: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' }[color];
+    return <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClasses}`}>{text}</span>;
 };
 
 const StatusTag: React.FC<{ status: 'Проведено' | 'Не проведено' }> = ({ status }) => {
-    const colorClasses = status === 'Проведено'
-        ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
-        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100';
-    return (
-        <span className={`px-2 py-1 text-xs font-semibold rounded-lg ${colorClasses}`}>
-            {status}
-        </span>
-    );
+    const colorClasses = status === 'Проведено' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100';
+    return <span className={`px-2 py-1 text-xs font-semibold rounded-lg ${colorClasses}`}>{status}</span>;
 };
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 };
 
-const productionTypeDisplay: Record<string, string> = {
-    'fully_produced': 'Повністю вироблений',
-    'sufficient_processing': 'Достатня обробка'
-};
-
-const certificateServiceTypeDisplay: Record<string, string> = {
-    'standard': 'Стандартний',
-    'replacement': 'Замінний',
-    'reissuance': 'Переоформлення',
-    'duplicate': 'Дублікат'
-};
-
-const conclusionTypeDisplay: Record<string, string> = {
-    'standard': 'Стандартний',
-    'contractual': 'Договірний',
-    'custom_cost': 'Своя вартість'
-};
+const conclusionTypeDisplay: Record<string, string> = { 'standard': 'Стандартний', 'contractual': 'Договірний', 'custom_cost': 'Своя вартість' };
 
 const RecordsTable: React.FC<RecordsTableProps> = ({ 
     records, 
@@ -156,15 +120,13 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     onDeleteMultipleRecords, 
     firms, 
     experts, 
-    costModelTable, 
-    generalSettings, 
+    yearlySettings, 
     showToast, 
     activeMode, 
     selectedMonth,
     onImportRecords,
     onExportRecords,
     currentUser,
-    unprocessedCounts,
     editingActivity = [],
     onReportFocus
 }) => {
@@ -179,209 +141,89 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     const [exportStartDate, setExportStartDate] = useState('');
     const [exportEndDate, setExportEndDate] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 50;
     
-    // Reset pagination on filter change
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [activeMode, selectedMonth, searchTerm]);
+    useEffect(() => { setCurrentPage(1); }, [activeMode, selectedMonth, searchTerm]);
 
-    
-    const handleOpenAddModal = () => {
-        setRecordToEdit(null);
-        setModalMode('add');
-    };
-
+    const handleOpenAddModal = () => { setRecordToEdit(null); setModalMode('add'); };
     const handleOpenEditModal = (record: AppRecord) => {
         const editor = editingActivity.find(e => e.recordId === record.id && e.userFullName !== currentUser?.fullName);
-        if (editor) {
-            showToast(`Цей запис зараз редагує ${editor.userFullName}. Будь ласка, зачекайте.`, 'error');
-            return;
-        }
-        setRecordToEdit(record);
-        setModalMode('edit');
+        if (editor) { showToast(`Цей запис зараз редагує ${editor.userFullName}.`, 'error'); return; }
+        setRecordToEdit(record); setModalMode('edit');
         if (onReportFocus) onReportFocus(record.id, true);
     };
 
     const handleCloseModal = () => {
-        if (modalMode === 'edit' && recordToEdit && onReportFocus) {
-            onReportFocus(recordToEdit.id, false);
-        }
-        setModalMode(null);
-        setRecordToEdit(null);
+        if (modalMode === 'edit' && recordToEdit && onReportFocus) onReportFocus(recordToEdit.id, false);
+        setModalMode(null); setRecordToEdit(null);
     };
     
-    const handleOpenDeleteModal = (id: number) => {
-        setRecordToDelete(id);
-        setIsDeleteModalOpen(true);
-    };
-
-    const handleCloseDeleteModal = () => {
-        setRecordToDelete(null);
-        setIsDeleteModalOpen(false);
-    };
-
-    const handleConfirmDelete = () => {
-        if (recordToDelete !== null) {
-            onDeleteRecord(recordToDelete);
-        }
-        handleCloseDeleteModal();
-    };
+    const handleOpenDeleteModal = (id: number) => { setRecordToDelete(id); setIsDeleteModalOpen(true); };
+    const handleCloseDeleteModal = () => { setRecordToDelete(null); setIsDeleteModalOpen(false); };
+    const handleConfirmDelete = () => { if (recordToDelete !== null) onDeleteRecord(recordToDelete); handleCloseDeleteModal(); };
 
     const handleGenerateOrder = (record: AppRecord) => {
-        if (activeMode !== 'conclusions') return;
-    
         const firm = firms.find(f => f.name === record.companyName);
-        if (!firm) {
-            showToast('Фірму для цього запису не знайдено.', 'error');
-            return;
-        }
-    
-        const orderHtml = generateOrderHtml(record, firm, costModelTable, generalSettings);
+        if (!firm) { showToast('Фірму не знайдено.', 'error'); return; }
+        const year = record.endDate.substring(0, 4);
+        const settings = yearlySettings[year] || yearlySettings["2025"];
+        const orderHtml = generateOrderHtml(record, firm, settings.costModelTable || [], settings.generalSettings);
         const newWindow = window.open('', '_blank');
-        if (newWindow) {
-            newWindow.document.write(orderHtml);
-            newWindow.document.close();
-        } else {
-            showToast('Не вдалося відкрити нове вікно. Будь ласка, дозвольте спливаючі вікна для цього сайту.', 'error');
-        }
+        if (newWindow) { newWindow.document.write(orderHtml); newWindow.document.close(); }
     };
     
     const handleGenerateCertificateOrder = (record: AppRecord) => {
-        if (activeMode !== 'certificates') return;
-
-        let firm: Firm | undefined = firms.find(f => f.name === record.companyName);
-        if (!firm) {
-            // Assume it's a manual FOP and create a placeholder firm object
-            firm = {
-                id: Date.now(),
-                name: record.companyName,
-                address: '—', // Placeholder as we don't have this data
-                directorName: record.companyName, // Use FOP name for director field
-                edrpou: '—',
-                taxNumber: '—',
-                productName: '' // Not used in certificate order
-            };
-        }
-
-        const orderHtml = generateCertificateOrderHtml(record, firm, generalSettings);
+        let firm = firms.find(f => f.name === record.companyName) || { id: 0, name: record.companyName, address: '—', directorName: record.companyName, edrpou: '—', taxNumber: '—', productName: '' };
+        const year = record.endDate.substring(0, 4);
+        const settings = yearlySettings[year] || yearlySettings["2025"];
+        const orderHtml = generateCertificateOrderHtml(record, firm, settings.generalSettings);
         const newWindow = window.open('', '_blank');
-        if (newWindow) {
-            newWindow.document.write(orderHtml);
-            newWindow.document.close();
-        } else {
-            showToast('Не вдалося відкрити нове вікно. Будь ласка, дозвольте спливаючі вікна для цього сайту.', 'error');
-        }
+        if (newWindow) { newWindow.document.write(orderHtml); newWindow.document.close(); }
     };
 
     const handleGenerateCertificateAct = (record: AppRecord) => {
-        if (activeMode !== 'certificates') return;
-
-        let firm: Firm | undefined = firms.find(f => f.name === record.companyName);
-        if (!firm) {
-             firm = {
-                id: Date.now(),
-                name: record.companyName,
-                address: '—',
-                directorName: record.companyName,
-                edrpou: '—',
-                taxNumber: '—',
-                productName: ''
-            };
-        }
-
-        const actHtml = generateCertificateActHtml(record, firm, generalSettings);
+        let firm = firms.find(f => f.name === record.companyName) || { id: 0, name: record.companyName, address: '—', directorName: record.companyName, edrpou: '—', taxNumber: '—', productName: '' };
+        const year = record.endDate.substring(0, 4);
+        const settings = yearlySettings[year] || yearlySettings["2025"];
+        const actHtml = generateCertificateActHtml(record, firm, settings.generalSettings);
         const newWindow = window.open('', '_blank');
-        if (newWindow) {
-            newWindow.document.write(actHtml);
-            newWindow.document.close();
-        } else {
-            showToast('Не вдалося відкрити нове вікно.', 'error');
-        }
+        if (newWindow) { newWindow.document.write(actHtml); newWindow.document.close(); }
     };
 
     const handlePrintRecords = () => {
         const html = generateRecordsHtml(recordsWithCost, activeMode);
         const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(html);
-            printWindow.document.close();
-        } else {
-            showToast('Не вдалося відкрити нове вікно. Будь ласка, дозвольте спливаючі вікна для цього сайту.', 'error');
-        }
+        if (printWindow) { printWindow.document.write(html); printWindow.document.close(); }
     };
 
     const handleGenerateMonthlyReport = () => {
-        const reportHtml = generateMonthlyReportHtml(records, firms, costModelTable, generalSettings, selectedMonth, activeMode);
+        // Report still passes the full maps, internals will handle yearly lookups if needed, 
+        // but for now generateMonthlyReportHtml needs to be updated to match signature.
+        // Simplified: pass the yearlySettings to report generator
+        const reportHtml = generateMonthlyReportHtml(records, firms, yearlySettings, selectedMonth, activeMode);
         const newWindow = window.open('', '_blank');
-        if (newWindow) {
-            newWindow.document.write(reportHtml);
-            newWindow.document.close();
-        } else {
-            showToast('Не вдалося відкрити нове вікно. Будь ласка, дозвольте спливаючі вікна для цього сайту.', 'error');
-        }
+        if (newWindow) { newWindow.document.write(reportHtml); newWindow.document.close(); }
     };
 
     const handleGenerateJournal = () => {
         const journalHtml = generateJournalHtml(recordsWithCost, firms, activeMode);
         const newWindow = window.open('', '_blank');
-        if (newWindow) {
-            newWindow.document.write(journalHtml);
-            newWindow.document.close();
-        } else {
-            showToast('Не вдалося відкрити нове вікно. Будь ласка, дозвольте спливаючі вікна для цього сайту.', 'error');
-        }
+        if (newWindow) { newWindow.document.write(journalHtml); newWindow.document.close(); }
     };
-
-    const handleImportClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            onImportRecords(file);
-        }
-        // Reset file input value so same file can be selected again
-        if (e.target) {
-            e.target.value = '';
-        }
-    };
-
 
     const recordsWithCost = useMemo(() => {
         return records.map(record => {
-            const costData = {
-                models: record.models,
-                positions: record.positions,
-                codes: record.codes,
-                complexity: record.complexity,
-                urgency: record.urgency,
-                discount: record.discount,
-                pages: record.pages,
-                additionalPages: record.additionalPages,
-                units: record.units,
-                productionType: record.productionType,
-                certificateServiceType: record.certificateServiceType,
-                conclusionType: record.conclusionType,
-                customCost: record.customCost,
-                isQuickRegistration: record.isQuickRegistration,
-            };
-            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
+            const costData = { ...record, endDate: record.endDate };
+            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, yearlySettings, activeMode);
             return { ...record, sumWithoutDiscount, sumWithDiscount };
         });
-    }, [records, costModelTable, generalSettings, activeMode]);
+    }, [records, yearlySettings, activeMode]);
 
     const filteredRecords = useMemo(() => {
         if (!searchTerm) return recordsWithCost;
         const lowerTerm = searchTerm.toLowerCase();
-        return recordsWithCost.filter(r => 
-            r.companyName.toLowerCase().includes(lowerTerm) || 
-            r.registrationNumber.toLowerCase().includes(lowerTerm) ||
-            (r.comment && r.comment.toLowerCase().includes(lowerTerm))
-        );
+        return recordsWithCost.filter(r => r.companyName.toLowerCase().includes(lowerTerm) || r.registrationNumber.toLowerCase().includes(lowerTerm) || (r.comment && r.comment.toLowerCase().includes(lowerTerm)));
     }, [recordsWithCost, searchTerm]);
 
     const sortedRecords = useMemo(() => {
@@ -390,471 +232,128 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
             sortableItems.sort((a, b) => {
                 const aValue = a[sortConfig.key as keyof typeof a];
                 const bValue = b[sortConfig.key as keyof typeof b];
-
                 if (aValue === null || aValue === undefined) return 1;
                 if (bValue === null || bValue === undefined) return -1;
-                
-                let comparison = 0;
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    if (['startDate', 'endDate'].includes(sortConfig.key)) {
-                        comparison = new Date(aValue).getTime() - new Date(bValue).getTime();
-                    } else {
-                        comparison = aValue.localeCompare(bValue);
-                    }
-                } else if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
-                    comparison = aValue === bValue ? 0 : aValue ? -1 : 1;
-                } else {
-                    comparison = (aValue as number) - (bValue as number);
-                }
-
-                return sortConfig.direction === 'ascending' ? comparison : -comparison;
+                let comp = 0;
+                if (typeof aValue === 'string' && typeof bValue === 'string') comp = (['startDate', 'endDate'].includes(sortConfig.key)) ? new Date(aValue).getTime() - new Date(bValue).getTime() : aValue.localeCompare(bValue);
+                else comp = (aValue as number) - (bValue as number);
+                return sortConfig.direction === 'ascending' ? comp : -comp;
             });
         }
         return sortableItems;
     }, [filteredRecords, sortConfig]);
 
-    // Pagination Logic
     const totalPages = Math.ceil(sortedRecords.length / itemsPerPage);
     const paginatedRecords = sortedRecords.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-    const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= totalPages) {
-            setCurrentPage(newPage);
-        }
-    };
-
-
-    const requestSort = (key: string) => {
-        let direction: 'ascending' | 'descending' = 'ascending';
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
-        setSortConfig({ key, direction });
-    };
-
-    const formatDateString = (dateStr: string) => {
-        if (!dateStr || dateStr.includes('.')) return dateStr;
-        
-        try {
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) { // Check for invalid date
-                return dateStr;
-            }
-
-            const shortMonthNames = [
-                'січ', 'лют', 'бер', 'квіт', 'трав', 'черв',
-                'лип', 'серп', 'вер', 'жовт', 'лист', 'груд'
-            ];
-            
-            const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-            const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
-            
-            const day = String(adjustedDate.getDate()).padStart(2, '0');
-            const month = shortMonthNames[adjustedDate.getMonth()];
-            const year = adjustedDate.getFullYear();
-            
-            return `${day} ${month}. ${year} р.`;
-        } catch (error) {
-            console.error("Error formatting date:", dateStr, error);
-            return dateStr; // Return original string if parsing fails
-        }
-    };
-    
-    const getConclusionNoun = (count: number) => {
-        if (count === 1) return 'експертний висновок';
-        if (count > 1 && count < 5) return 'експертні висновки';
-        return 'експертних висновків';
-    };
-
-    const getCertificateNoun = (count: number) => {
-        if (count === 1) return 'сертифікат';
-        if (count > 1 && count < 5) return 'сертифікати';
-        return 'сертифікатів';
-    };
-
-    const renderSnyetkovMessage = () => {
-        if (currentUser?.fullName !== 'Снєтков С.Ю.') return null;
-
-        const { conclusions, certificates } = unprocessedCounts;
-        const totalUnprocessed = conclusions + certificates;
-
-        if (totalUnprocessed === 0) {
-            return (
-                <div className="mb-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded-lg dark:bg-green-900/50 dark:border-green-700 dark:text-green-200">
-                    Всі роботи проведені
-                </div>
-            );
-        }
-
-        const conclusionText = conclusions > 0 ? `${conclusions} ${getConclusionNoun(conclusions)}` : '';
-        const certificateText = certificates > 0 ? `${certificates} ${getCertificateNoun(certificates)}` : '';
-        const connector = conclusionText && certificateText ? ' та ' : '';
-
-        return (
-            <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg dark:bg-yellow-900/50 dark:border-yellow-700 dark:text-yellow-200">
-                Потрібно провести: {conclusionText}{connector}{certificateText}
-            </div>
-        );
-    };
-
-    const conclusionHeaders = [
-        { key: 'registrationNumber', label: 'РЕЄСТР. №' },
-        { key: 'actNumber', label: 'АКТ' },
-        { key: 'startDate', label: 'ДАТА ПОЧАТКУ' },
-        { key: 'endDate', label: 'ДАТА ЗАКІНЧЕННЯ' },
-        { key: 'companyName', label: 'НАЗВА КОМПАНІЇ' },
-        { key: 'comment', label: 'КОМЕНТАР' },
-        { key: 'units', label: 'ОДИНИЦІ' },
-        { key: 'models', label: 'МОДЕЛІ' },
-        { key: 'positions', label: 'ПОЗИЦІЇ' },
-        { key: 'pages', label: 'СТОРІНКИ' },
-        { key: 'codes', label: 'КОДИ' },
-        { key: 'complexity', label: 'СКЛАДНІСТЬ' },
-        { key: 'urgency', label: 'ТЕРМІНОВІСТЬ' },
-        { key: 'discount', label: 'ЗНИЖКА' },
-        { key: 'conclusionType', label: 'ТАРИФ'},
-        { key: 'sumWithoutDiscount', label: 'СУМА (БЕЗ ЗН.)' },
-        { key: 'sumWithDiscount', label: 'СУМА (ЗІ ЗН.)' },
-        { key: 'expert', label: "ІМ'Я ЕКСПЕРТА" },
-        { key: 'status', label: 'СТАТУС' },
-        { key: 'actions', label: 'ДІЇ', sortable: false }
+    const headers = activeMode === 'conclusions' ? [
+        { key: 'registrationNumber', label: 'РЕЄСТР. №' }, { key: 'actNumber', label: 'АКТ' }, { key: 'startDate', label: 'ДАТА ПОЧАТКУ' }, { key: 'endDate', label: 'ДАТА ЗАКІНЧЕННЯ' }, { key: 'companyName', label: 'НАЗВА КОМПАНІЇ' }, { key: 'comment', label: 'КОМЕНТАР' }, { key: 'units', label: 'ОДИНИЦІ' }, { key: 'models', label: 'МОДЕЛІ' }, { key: 'positions', label: 'ПОЗИЦІЇ' }, { key: 'pages', label: 'СТОРІНКИ' }, { key: 'codes', label: 'КОДИ' }, { key: 'complexity', label: 'СКЛАДНІСТЬ' }, { key: 'urgency', label: 'ТЕРМІНОВІСТЬ' }, { key: 'discount', label: 'ЗНИЖКА' }, { key: 'conclusionType', label: 'ТАРИФ'}, { key: 'sumWithoutDiscount', label: 'СУМА (БЕЗ ЗН.)' }, { key: 'sumWithDiscount', label: 'СУМА (ЗІ ЗН.)' }, { key: 'expert', label: "ІМ'Я ЕКСПЕРТА" }, { key: 'status', label: 'СТАТУС' }, { key: 'actions', label: 'ДІЇ', sortable: false }
+    ] : [
+        { key: 'registrationNumber', label: 'РЕЄСТР. №' }, { key: 'actNumber', label: 'АКТ' }, { key: 'startDate', label: 'ДАТА ПОЧАТКУ' }, { key: 'endDate', label: 'ДАТА ЗАКІНЧЕННЯ' }, { key: 'companyName', label: 'НАЗВА КОМПАНІЇ' }, { key: 'comment', label: 'КОМЕНТАР' }, { key: 'certificateForm', label: 'ФОРМА СЕРТИФІКАТУ' }, { key: 'certificateServiceType', label: 'ТИП ПОСЛУГИ' }, { key: 'productionType', label: 'ТИП ВИРОБНИЦТВА' }, { key: 'units', label: 'КІЛ-СТЬ СЕРТИФІКАТІВ' }, { key: 'pages', label: 'СТОРІНКИ'}, { key: 'additionalPages', label: 'ДОД. АРКУШІ'}, { key: 'positions', label: 'КІЛ-СТЬ ДОД. ПОЗИЦІЙ' }, { key: 'urgency', label: 'ТЕРМІНОВІСТЬ' }, { key: 'sumWithoutDiscount', label: 'СУМА БЕЗ ПДВ' }, { key: 'expert', label: "ПІБ ЕКСПЕРТА" }, { key: 'status', label: 'СТАТУС' }, { key: 'actions', label: 'ДІЇ', sortable: false }
     ];
-
-    const certificateHeaders = [
-        { key: 'registrationNumber', label: 'РЕЄСТР. №' },
-        { key: 'actNumber', label: 'АКТ' },
-        { key: 'startDate', label: 'ДАТА ПОЧАТКУ' },
-        { key: 'endDate', label: 'ДАТА ЗАКІНЧЕННЯ' },
-        { key: 'companyName', label: 'НАЗВА КОМПАНІЇ' },
-        { key: 'comment', label: 'КОМЕНТАР' },
-        { key: 'certificateForm', label: 'ФОРМА СЕРТИФІКАТУ' },
-        { key: 'certificateServiceType', label: 'ТИП ПОСЛУГИ' },
-        { key: 'productionType', label: 'ТИП ВИРОБНИЦТВА' },
-        { key: 'units', label: 'КІЛ-СТЬ СЕРТИФІКАТІВ' },
-        { key: 'pages', label: 'СТОРІНКИ'},
-        { key: 'additionalPages', label: 'ДОД. АРКУШІ'},
-        { key: 'positions', label: 'КІЛ-СТЬ ДОД. ПОЗИЦІЙ' },
-        { key: 'urgency', label: 'ТЕРМІНОВІСТЬ' },
-        { key: 'sumWithoutDiscount', label: 'СУМА БЕЗ ПДВ' },
-        { key: 'expert', label: "ПІБ ЕКСПЕРТА" },
-        { key: 'status', label: 'СТАТУС' },
-        { key: 'actions', label: 'ДІЇ', sortable: false }
-    ];
-
-    const headers = activeMode === 'conclusions' ? conclusionHeaders : certificateHeaders;
 
     return (
         <>
         <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:text-gray-100">
-             {renderSnyetkovMessage()}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
                 <div className="relative w-full lg:w-auto">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <SearchIcon />
-                    </div>
-                    <input 
-                        type="text" 
-                        placeholder="Пошук записів..." 
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full lg:w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
+                    <input type="text" placeholder="Пошук записів..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full lg:w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white" />
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                    <div className="flex items-end gap-2 p-2 border rounded-lg dark:border-gray-600">
-                        <div>
-                            <label className="text-xs text-gray-500 dark:text-gray-400">Експорт з</label>
-                            <input 
-                                type="date" 
-                                value={exportStartDate} 
-                                onChange={e => setExportStartDate(e.target.value)}
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-500"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs text-gray-500 dark:text-gray-400">по</label>
-                            <input 
-                                type="date" 
-                                value={exportEndDate} 
-                                onChange={e => setExportEndDate(e.target.value)}
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-500"
-                            />
-                        </div>
-                        <button
-                            onClick={() => onExportRecords(exportStartDate, exportEndDate)}
-                            className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
-                            title="Експортувати записи за вибраний період"
-                        >
-                            <DownloadIcon />
-                        </button>
-                    </div>
-                     <button
-                        onClick={handleImportClick}
-                        className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
-                        title="Імпортувати записи"
-                    >
-                        <UploadIcon />
-                    </button>
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={handleFileChange} 
-                        accept=".json" 
-                        style={{ display: 'none' }} 
-                    />
-                    <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
-                    <button
-                        onClick={handlePrintRecords}
-                        className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
-                        title="Роздрукувати список"
-                    >
-                        <PrintIcon />
-                    </button>
-                    <button
-                        onClick={handleGenerateMonthlyReport}
-                        className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
-                        title="Сформувати місячний звіт"
-                    >
-                        <ReportIcon />
-                    </button>
-                    <button
-                        onClick={handleGenerateJournal}
-                        className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:text-gray-200 hover:dark:bg-gray-600"
-                        title="Надрукувати журнал"
-                    >
-                        <JournalIcon />
-                    </button>
-                    <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
-                    <button
-                        onClick={() => setIsBulkDeleteModalOpen(true)}
-                        className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-                        title="Масове видалення записів"
-                    >
-                        <DeleteIcon />
-                        <span className="ml-2">Видалити</span>
-                    </button>
-                    <button 
-                        onClick={handleOpenAddModal}
-                        className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-                        <span className="text-xl mr-2 font-light">+</span> Додати запис
-                    </button>
+                    <button onClick={handlePrintRecords} className="p-2 bg-gray-100 rounded-lg dark:bg-gray-700" title="Роздрукувати список"><PrintIcon /></button>
+                    <button onClick={handleGenerateMonthlyReport} className="p-2 bg-gray-100 rounded-lg dark:bg-gray-700" title="Місячний звіт"><ReportIcon /></button>
+                    <button onClick={handleGenerateJournal} className="p-2 bg-gray-100 rounded-lg dark:bg-gray-700" title="Журнал"><JournalIcon /></button>
+                    <button onClick={() => setIsBulkDeleteModalOpen(true)} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"><DeleteIcon /></button>
+                    <button onClick={handleOpenAddModal} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">+ Додати запис</button>
                 </div>
             </div>
 
             <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border-collapse">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
-                            {headers.map(header => (
-                                <th 
-                                    key={header.key} 
-                                    scope="col" 
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider select-none dark:text-gray-200"
-                                    onClick={() => header.sortable !== false && requestSort(header.key)}
-                                    style={{ cursor: header.sortable !== false ? 'pointer' : 'default' }}
-                                >
-                                    <div className="flex items-center">
-                                        {header.label}
-                                        {sortConfig && sortConfig.key === header.key && (
-                                            <span className="ml-2 text-gray-600 dark:text-gray-300">
-                                                {sortConfig.direction === 'ascending' ? '▲' : '▼'}
-                                            </span>
-                                        )}
-                                    </div>
-                                </th>
+                            {headers.map(h => (
+                                <th key={h.key} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-200 cursor-pointer" onClick={() => h.sortable !== false && setSortConfig({ key: h.key, direction: sortConfig?.key === h.key && sortConfig.direction === 'ascending' ? 'descending' : 'ascending' })}>{h.label}</th>
                             ))}
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                        {paginatedRecords.map((record) => {
-                            const activeEditor = editingActivity.find(e => e.recordId === record.id && e.userFullName !== currentUser?.fullName);
-                            const rowClass = activeEditor 
-                                ? 'bg-purple-50 border-2 border-purple-500 dark:bg-purple-900/30 dark:border-purple-500' 
-                                : `hover:bg-gray-50 dark:hover:bg-gray-700 ${currentUser?.fullName === 'Снєтков С.Ю.' && record.status === 'Не проведено' ? 'bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-800/60' : ''}`;
-
-                            return (
-                                <tr 
-                                    key={record.id} 
-                                    onDoubleClick={() => setInfoModalRecord(record)} 
-                                    className={`${rowClass} cursor-pointer transition-colors duration-200 relative`}
-                                >
-                                    {activeEditor && (
-                                        <td colSpan={headers.length} className="absolute top-0 left-0 w-full h-0 p-0 overflow-visible z-10 pointer-events-none">
-                                            <div className="absolute -top-3 left-4 bg-purple-500 text-white text-[10px] px-2 py-0.5 rounded shadow-sm">
-                                                редагує: {activeEditor.userFullName}
-                                            </div>
-                                        </td>
-                                    )}
-                                    {activeMode === 'conclusions' ? (
-                                        <>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white flex items-center">
-                                                {record.registrationNumber}
-                                                {record.isQuickRegistration && <span className="ml-2"><Tag text="Швидка" color="orange" /></span>}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.actNumber}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.startDate)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.endDate)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.companyName}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.comment}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.units}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.conclusionType === 'standard' ? record.models : '—'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.conclusionType === 'standard' ? record.positions : '—'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.conclusionType === 'contractual' ? record.pages : '—'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.codes}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.conclusionType === 'standard' ? (record.complexity ? <Tag text="Так" color="orange" /> : '') : '—'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.conclusionType === 'standard' ? (record.urgency ? <Tag text="Так" color="red" /> : <Tag text="Ні" color="neutral" />) : '—'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.discount}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{conclusionTypeDisplay[record.conclusionType as keyof typeof conclusionTypeDisplay] || 'Стандартний'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium dark:text-gray-200">{formatCurrency(record.sumWithoutDiscount)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium dark:text-gray-200">{formatCurrency(record.sumWithDiscount)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.expert}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300"><StatusTag status={record.status} /></td>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white flex items-center">
-                                                {record.registrationNumber}
-                                                {record.isQuickRegistration && <span className="ml-2"><Tag text="Швидка" color="orange" /></span>}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.actNumber}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.startDate)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatDateString(record.endDate)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.companyName}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.comment}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.certificateForm}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{certificateServiceTypeDisplay[record.certificateServiceType as keyof typeof certificateServiceTypeDisplay] || 'Стандартний'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{productionTypeDisplay[record.productionType as keyof typeof productionTypeDisplay] || ''}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.units}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.pages}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.additionalPages}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.positions}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.urgency ? <Tag text="Так" color="red" /> : <Tag text="Ні" color="neutral" />}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium dark:text-gray-200">{formatCurrency(record.sumWithoutDiscount)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.expert}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300"><StatusTag status={record.status} /></td>
-                                        </>
-                                    )}
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <div className="flex items-center space-x-3">
-                                            <button onClick={() => handleOpenEditModal(record)} title="Редагувати запис" className="focus:outline-none disabled:opacity-50" disabled={!!activeEditor}><EditIcon /></button>
-                                            <button 
-                                                onClick={() => activeMode === 'conclusions' ? handleGenerateOrder(record) : handleGenerateCertificateOrder(record)} 
-                                                title={activeMode === 'conclusions' ? "Сформувати наряд" : "Сформувати наряд (сертифікат)"} 
-                                                className="focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                                                disabled={record.isQuickRegistration}
-                                            >
-                                                <PrintIcon />
-                                            </button>
-                                            {activeMode === 'certificates' && (
-                                                <button 
-                                                    onClick={() => handleGenerateCertificateAct(record)} 
-                                                    title="Сформувати Акт" 
-                                                    className="focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    disabled={record.isQuickRegistration}
-                                                >
-                                                    <ActIcon />
-                                                </button>
-                                            )}
-                                            <button onClick={() => handleOpenDeleteModal(record.id)} className="focus:outline-none" title="Видалити запис"><DeleteIcon /></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
+                        {paginatedRecords.map((record) => (
+                            <tr key={record.id} onDoubleClick={() => setInfoModalRecord(record)} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                                {activeMode === 'conclusions' ? (
+                                    <>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium dark:text-white">{record.registrationNumber}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.actNumber}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.startDate}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.endDate}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.companyName}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.comment}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.units}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.models}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.positions}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.pages}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.codes}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.complexity ? 'Так' : 'Ні'}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.urgency ? 'Так' : 'Ні'}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.discount}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{conclusionTypeDisplay[record.conclusionType as string] || 'Стандартний'}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium dark:text-gray-200">{formatCurrency(record.sumWithoutDiscount)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium dark:text-gray-200">{formatCurrency(record.sumWithDiscount)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.expert}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm"><StatusTag status={record.status} /></td>
+                                    </>
+                                ) : (
+                                    <>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium dark:text-white">{record.registrationNumber}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.actNumber}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.startDate}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.endDate}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.companyName}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.comment}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.certificateForm}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.certificateServiceType}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.productionType}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.units}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.pages}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.additionalPages}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.positions}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.urgency ? 'Так' : 'Ні'}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium dark:text-gray-200">{formatCurrency(record.sumWithoutDiscount)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{record.expert}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm"><StatusTag status={record.status} /></td>
+                                    </>
+                                )}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                    <div className="flex items-center space-x-3">
+                                        <button onClick={() => handleOpenEditModal(record)}><EditIcon /></button>
+                                        <button onClick={() => activeMode === 'conclusions' ? handleGenerateOrder(record) : handleGenerateCertificateOrder(record)}><PrintIcon /></button>
+                                        {activeMode === 'certificates' && <button onClick={() => handleGenerateCertificateAct(record)}><ActIcon /></button>}
+                                        <button onClick={() => handleOpenDeleteModal(record.id)}><DeleteIcon /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
-            
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 dark:bg-gray-800 dark:border-gray-700">
-                    <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                        <div>
-                            <p className="text-sm text-gray-700 dark:text-gray-300">
-                                Показано <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> до <span className="font-medium">{Math.min(currentPage * itemsPerPage, sortedRecords.length)}</span> із <span className="font-medium">{sortedRecords.length}</span> результатів
-                            </p>
-                        </div>
-                        <div>
-                            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                                <button
-                                    onClick={() => handlePageChange(currentPage - 1)}
-                                    disabled={currentPage === 1}
-                                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed dark:ring-gray-600 dark:hover:bg-gray-700"
-                                >
-                                    <span className="sr-only">Попередня</span>
-                                    <ChevronLeftIcon />
-                                </button>
-                                <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 focus:outline-offset-0 dark:text-white dark:ring-gray-600">
-                                    Сторінка {currentPage} з {totalPages}
-                                </span>
-                                <button
-                                    onClick={() => handlePageChange(currentPage + 1)}
-                                    disabled={currentPage === totalPages}
-                                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed dark:ring-gray-600 dark:hover:bg-gray-700"
-                                >
-                                    <span className="sr-only">Наступна</span>
-                                    <ChevronRightIcon />
-                                </button>
-                            </nav>
-                        </div>
-                    </div>
-                </div>
-            )}
-
         </div>
         {modalMode && (
-            <RecordModal
-                mode={modalMode}
-                isOpen={!!modalMode}
-                onClose={handleCloseModal}
-                onAddRecord={onAddRecord}
-                onUpdateRecord={onUpdateRecord}
-                recordToEdit={recordToEdit}
-                firms={firms}
-                experts={experts}
-                costModelTable={costModelTable}
-                generalSettings={generalSettings}
-                showToast={showToast}
-                activeMode={activeMode}
-                allRecords={allRecords}
-            />
-        )}
-        {infoModalRecord && (
-            <RecordInfoModal 
-                record={infoModalRecord} 
-                onClose={() => setInfoModalRecord(null)}
+            <RecordModal 
+                mode={modalMode} 
+                isOpen={!!modalMode} 
+                onClose={handleCloseModal} 
+                onAddRecord={onAddRecord} 
+                onUpdateRecord={onUpdateRecord} 
+                recordToEdit={recordToEdit} 
+                firms={firms} 
+                experts={experts} 
+                yearlySettings={yearlySettings} 
+                showToast={showToast} 
                 activeMode={activeMode} 
+                allRecords={allRecords} 
             />
         )}
-        {isDeleteModalOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
-                <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm dark:bg-gray-800 dark:text-gray-100">
-                    <h3 id="delete-modal-title" className="text-lg font-bold text-gray-900 dark:text-white">Підтвердження видалення</h3>
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Ви впевнені, що хочете видалити цей запис? Цю дію неможливо буде скасувати.</p>
-                    <div className="mt-6 flex justify-end space-x-3">
-                        <button 
-                            onClick={handleCloseDeleteModal}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 hover:dark:bg-gray-600"
-                        >
-                            Скасувати
-                        </button>
-                        <button 
-                            onClick={handleConfirmDelete}
-                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        >
-                            Видалити
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-        <BulkDeleteModal
-            isOpen={isBulkDeleteModalOpen}
-            onClose={() => setIsBulkDeleteModalOpen(false)}
-            allRecords={allRecords}
-            onDelete={onDeleteMultipleRecords}
-            activeMode={activeMode}
-        />
         </>
     );
 };

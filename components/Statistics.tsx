@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import StatCard from './StatCard';
-import type { Record as AppRecord, CostModelRow, GeneralSettings, MonthlyPlan, CurrentUser } from '../types';
+import type { Record as AppRecord, YearSettings, MonthlyPlan, CurrentUser } from '../types';
 import { calculateCost } from '../utils/calculateCost';
 import type { AppMode } from '../App';
 
@@ -13,8 +13,7 @@ const ChartIcon = () => (
 
 interface StatisticsProps {
     records: AppRecord[];
-    costModelTable: CostModelRow[];
-    generalSettings: GeneralSettings;
+    yearlySettings: Record<string, YearSettings>;
     experts: string[];
     selectedExpert: string;
     setSelectedExpert: (expert: string) => void;
@@ -26,15 +25,13 @@ interface StatisticsProps {
     currentUser: CurrentUser | null;
 }
 
-
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 };
 
 const Statistics: React.FC<StatisticsProps> = ({ 
     records, 
-    costModelTable, 
-    generalSettings,
+    yearlySettings,
     experts,
     selectedExpert,
     setSelectedExpert,
@@ -63,8 +60,9 @@ const Statistics: React.FC<StatisticsProps> = ({
                 certificateServiceType: record.certificateServiceType,
                 conclusionType: record.conclusionType,
                 customCost: record.customCost,
+                endDate: record.endDate
             };
-            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
+            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, yearlySettings, activeMode);
             acc.totalWithoutDiscount += sumWithoutDiscount;
             acc.totalWithDiscount += sumWithDiscount;
             return acc;
@@ -73,7 +71,7 @@ const Statistics: React.FC<StatisticsProps> = ({
         setTotalWithoutDiscount(totals.totalWithoutDiscount);
         setTotalWithDiscount(totals.totalWithDiscount);
 
-    }, [records, costModelTable, generalSettings, activeMode]);
+    }, [records, yearlySettings, activeMode]);
 
     const completedCount = records.filter(r => r.status === 'Проведено').length;
     const notCompletedCount = records.filter(r => r.status === 'Не проведено').length;
@@ -92,13 +90,13 @@ const Statistics: React.FC<StatisticsProps> = ({
             certificateServiceType: record.certificateServiceType,
             conclusionType: record.conclusionType,
             customCost: record.customCost,
+            endDate: record.endDate
         };
-        const { sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
+        const { sumWithDiscount } = calculateCost(costData, yearlySettings, activeMode);
         return acc + sumWithDiscount;
     }, 0);
 
     const totalPlanPercentage = monthlyPlan.totalPlan > 0 ? Math.min((totalCompletedOverall / monthlyPlan.totalPlan) * 100, 100) : 0;
-
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:text-gray-100">
@@ -109,58 +107,24 @@ const Statistics: React.FC<StatisticsProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
-                    <label htmlFor="expert" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Експерт</label>
-                    <select 
-                        id="expert" 
-                        value={selectedExpert} 
-                        onChange={(e) => setSelectedExpert(e.target.value)} 
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:disabled:bg-gray-600"
-                    >
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Експерт</label>
+                    <select value={selectedExpert} onChange={(e) => setSelectedExpert(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         <option value="all">Всі експерти</option>
                         {experts.map(expert => <option key={expert} value={expert}>{expert}</option>)}
                     </select>
                 </div>
                 <div className="md:col-span-2">
-                    <label htmlFor="month-select" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Виберіть місяць</label>
-                    <input 
-                        type="month" 
-                        id="month-select" 
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Виберіть місяць</label>
+                    <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                 </div>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <StatCard 
-                    title="Всього записів"
-                    value={records.length.toString()}
-                    subtitle={`Проведено: ${completedCount} | Не проведено: ${notCompletedCount}`}
-                    icon="document"
-                    color="blue"
-                />
-                <StatCard 
-                    title="Останній рег. номер"
-                    value={lastRecord?.registrationNumber || 'N/A'}
-                    subtitle={lastRecord ? `${lastRecord.expert} | ${lastRecord.companyName}` : ''}
-                    icon="document"
-                    color="blue"
-                />
-                 <StatCard 
-                    title="Сума без знижки"
-                    value={formatCurrency(totalWithoutDiscount)}
-                    icon="dollar"
-                    color="green"
-                />
-                 <StatCard 
-                    title="Сума зі знижкою"
-                    value={formatCurrency(totalWithDiscount)}
-                    icon="dollar"
-                    color="green"
-                />
+                <StatCard title="Всього записів" value={records.length.toString()} subtitle={`Проведено: ${completedCount} | Не проведено: ${notCompletedCount}`} icon="document" color="blue" />
+                <StatCard title="Останній рег. номер" value={lastRecord?.registrationNumber || 'N/A'} subtitle={lastRecord ? `${lastRecord.expert} | ${lastRecord.companyName}` : ''} icon="document" color="blue" />
+                <StatCard title="Сума без знижки" value={formatCurrency(totalWithoutDiscount)} icon="dollar" color="green" />
+                <StatCard title="Сума зі знижкою" value={formatCurrency(totalWithDiscount)} icon="dollar" color="green" />
             </div>
-
 
             <div className="border-t border-gray-200 pt-6 dark:border-gray-700">
                 <div className="mb-8">
@@ -171,19 +135,9 @@ const Statistics: React.FC<StatisticsProps> = ({
                             <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{formatCurrency(totalCompletedOverall)} / {formatCurrency(monthlyPlan.totalPlan)}</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                            <div 
-                                className="bg-green-600 h-2.5 rounded-full" 
-                                style={{ width: `${totalPlanPercentage}%` }}
-                                role="progressbar"
-                                aria-valuenow={totalPlanPercentage}
-                                aria-valuemin={0}
-                                aria-valuemax={100}
-                                aria-label="Прогрес виконання загального плану"
-                            ></div>
+                            <div className="bg-green-600 h-2.5 rounded-full" style={{ width: `${totalPlanPercentage}%` }} role="progressbar" aria-valuenow={totalPlanPercentage} aria-valuemin={0} aria-valuemax={100}></div>
                         </div>
-                        <div className="text-right text-sm font-semibold text-green-700 mt-1 dark:text-green-400">
-                            {totalPlanPercentage.toFixed(2)}%
-                        </div>
+                        <div className="text-right text-sm font-semibold text-green-700 mt-1 dark:text-green-400">{totalPlanPercentage.toFixed(2)}%</div>
                     </div>
                  </div>
 
@@ -205,13 +159,13 @@ const Statistics: React.FC<StatisticsProps> = ({
                                 certificateServiceType: record.certificateServiceType,
                                 conclusionType: record.conclusionType,
                                 customCost: record.customCost,
+                                endDate: record.endDate
                              };
-                              const { sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
+                              const { sumWithDiscount } = calculateCost(costData, yearlySettings, activeMode);
                               return acc + sumWithDiscount;
                          }, 0);
                          const planAmount = Number(plan.planAmount) || 0;
                          const percentage = planAmount > 0 ? Math.min((totalCompleted / planAmount) * 100, 100) : 0;
- 
                          return (
                              <div key={plan.id}>
                                  <div className="flex justify-between items-center mb-1">
@@ -219,19 +173,9 @@ const Statistics: React.FC<StatisticsProps> = ({
                                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{formatCurrency(totalCompleted)} / {formatCurrency(planAmount)}</span>
                                  </div>
                                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                     <div 
-                                         className="bg-blue-600 h-2.5 rounded-full" 
-                                         style={{ width: `${percentage}%` }}
-                                         role="progressbar"
-                                         aria-valuenow={percentage}
-                                         aria-valuemin={0}
-                                         aria-valuemax={100}
-                                         aria-label={`Прогрес для ${plan.name}`}
-                                     ></div>
+                                     <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${percentage}%` }} role="progressbar" aria-valuenow={percentage} aria-valuemin={0} aria-valuemax={100}></div>
                                  </div>
-                                 <div className="text-right text-sm font-semibold text-blue-700 mt-1 dark:text-blue-400">
-                                     {percentage.toFixed(2)}%
-                                 </div>
+                                 <div className="text-right text-sm font-semibold text-blue-700 mt-1 dark:text-blue-400">{percentage.toFixed(2)}%</div>
                              </div>
                          );
                      })}

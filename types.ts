@@ -1,5 +1,4 @@
 
-
 export interface Record {
   id: number;
   registrationNumber: string;
@@ -76,6 +75,11 @@ export interface GeneralSettings {
   sufficientProcessing_additionalPositionCost?: number;
 }
 
+export interface YearSettings {
+  costModelTable?: CostModelRow[];
+  generalSettings: GeneralSettings;
+}
+
 export interface MonthlyPlan {
   totalPlan: number;
   expertPlans: ExpertPlan[];
@@ -87,7 +91,7 @@ export interface User {
   id: number;
   login: string;
   fullName: string;
-  password?: string; // Password is plain text as requested
+  password?: string;
   role: 'admin' | 'user';
 }
 
