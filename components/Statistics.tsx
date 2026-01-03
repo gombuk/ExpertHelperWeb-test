@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import StatCard from './StatCard';
-import type { Record as AppRecord, YearSettings, MonthlyPlan, CurrentUser } from '../types';
+import type { Record as AppRecord, MonthlyPlan, CurrentUser, GeneralSettings, CostModelRow } from '../types';
 import { calculateCost } from '../utils/calculateCost';
 import type { AppMode } from '../App';
 
@@ -13,7 +13,8 @@ const ChartIcon = () => (
 
 interface StatisticsProps {
     records: AppRecord[];
-    yearlySettings: Record<string, YearSettings>;
+    costModelTable: CostModelRow[] | undefined;
+    generalSettings: GeneralSettings;
     experts: string[];
     selectedExpert: string;
     setSelectedExpert: (expert: string) => void;
@@ -31,7 +32,8 @@ const formatCurrency = (value: number) => {
 
 const Statistics: React.FC<StatisticsProps> = ({ 
     records, 
-    yearlySettings,
+    costModelTable,
+    generalSettings,
     experts,
     selectedExpert,
     setSelectedExpert,
@@ -59,10 +61,9 @@ const Statistics: React.FC<StatisticsProps> = ({
                 productionType: record.productionType,
                 certificateServiceType: record.certificateServiceType,
                 conclusionType: record.conclusionType,
-                customCost: record.customCost,
-                endDate: record.endDate
+                customCost: record.customCost
             };
-            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, yearlySettings, activeMode);
+            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
             acc.totalWithoutDiscount += sumWithoutDiscount;
             acc.totalWithDiscount += sumWithDiscount;
             return acc;
@@ -71,7 +72,7 @@ const Statistics: React.FC<StatisticsProps> = ({
         setTotalWithoutDiscount(totals.totalWithoutDiscount);
         setTotalWithDiscount(totals.totalWithDiscount);
 
-    }, [records, yearlySettings, activeMode]);
+    }, [records, costModelTable, generalSettings, activeMode]);
 
     const completedCount = records.filter(r => r.status === 'Проведено').length;
     const notCompletedCount = records.filter(r => r.status === 'Не проведено').length;
@@ -89,10 +90,9 @@ const Statistics: React.FC<StatisticsProps> = ({
             productionType: record.productionType,
             certificateServiceType: record.certificateServiceType,
             conclusionType: record.conclusionType,
-            customCost: record.customCost,
-            endDate: record.endDate
+            customCost: record.customCost
         };
-        const { sumWithDiscount } = calculateCost(costData, yearlySettings, activeMode);
+        const { sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
         return acc + sumWithDiscount;
     }, 0);
 
@@ -158,10 +158,9 @@ const Statistics: React.FC<StatisticsProps> = ({
                                 productionType: record.productionType,
                                 certificateServiceType: record.certificateServiceType,
                                 conclusionType: record.conclusionType,
-                                customCost: record.customCost,
-                                endDate: record.endDate
+                                customCost: record.customCost
                              };
-                              const { sumWithDiscount } = calculateCost(costData, yearlySettings, activeMode);
+                              const { sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
                               return acc + sumWithDiscount;
                          }, 0);
                          const planAmount = Number(plan.planAmount) || 0;

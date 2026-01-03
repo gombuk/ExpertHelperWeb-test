@@ -75,11 +75,6 @@ export interface GeneralSettings {
   sufficientProcessing_additionalPositionCost?: number;
 }
 
-export interface YearSettings {
-  costModelTable?: CostModelRow[];
-  generalSettings: GeneralSettings;
-}
-
 export interface MonthlyPlan {
   totalPlan: number;
   expertPlans: ExpertPlan[];

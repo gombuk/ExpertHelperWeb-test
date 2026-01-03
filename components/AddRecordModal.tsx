@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import type { Record as AppRecord, Firm, YearSettings } from '../types';
+import React, { useState, useEffect } from 'react';
+import type { Record as AppRecord, Firm, GeneralSettings, CostModelRow } from '../types';
 import { calculateCost } from '../utils/calculateCost';
 import type { AppMode } from '../App';
 
@@ -13,7 +13,8 @@ interface RecordModalProps {
     recordToEdit?: AppRecord | null;
     firms: Firm[];
     experts: string[];
-    yearlySettings: Record<string, YearSettings>;
+    costModelTable: CostModelRow[] | undefined;
+    generalSettings: GeneralSettings;
     showToast: (message: string, type?: 'success' | 'error') => void;
     activeMode: AppMode;
     allRecords: AppRecord[];
@@ -46,7 +47,7 @@ const initialFormState: Omit<AppRecord, 'id'> = {
 };
 
 const RecordModal: React.FC<RecordModalProps> = ({ 
-    isOpen, onClose, mode, onAddRecord, onUpdateRecord, recordToEdit, firms, experts, yearlySettings, showToast, activeMode, allRecords
+    isOpen, onClose, mode, onAddRecord, onUpdateRecord, recordToEdit, firms, experts, costModelTable, generalSettings, showToast, activeMode, allRecords
 }) => {
     const [formState, setFormState] = useState(initialFormState);
     const [sumWithoutDiscount, setSumWithoutDiscount] = useState(0);
@@ -60,10 +61,10 @@ const RecordModal: React.FC<RecordModalProps> = ({
     }, [isOpen, mode, recordToEdit]);
 
     useEffect(() => {
-        const { sumWithoutDiscount, sumWithDiscount } = calculateCost({ ...formState, endDate: formState.endDate }, yearlySettings, activeMode);
+        const { sumWithoutDiscount, sumWithDiscount } = calculateCost(formState, costModelTable, generalSettings, activeMode);
         setSumWithoutDiscount(sumWithoutDiscount);
         setSumWithDiscount(sumWithDiscount);
-    }, [formState, yearlySettings, activeMode]);
+    }, [formState, costModelTable, generalSettings, activeMode]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -118,7 +119,6 @@ const RecordModal: React.FC<RecordModalProps> = ({
                     </div>
                     <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
                         <div className="text-lg font-bold">Розрахункова вартість: {sumWithDiscount.toFixed(2)} грн</div>
-                        <div className="text-xs text-gray-500">(Виходячи з тарифів на {formState.endDate.substring(0, 4)} рік)</div>
                     </div>
                     <div className="flex justify-end space-x-3 pt-6 border-t dark:border-gray-700">
                         <button type="button" onClick={onClose} className="px-4 py-2 border rounded dark:bg-gray-600">Скасувати</button>

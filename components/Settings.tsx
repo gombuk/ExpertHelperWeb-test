@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import type { CostModelRow, GeneralSettings, YearSettings } from '../types';
+import type { CostModelRow, GeneralSettings } from '../types';
 import type { View, AppMode } from '../App';
 
 const BackArrowIcon = () => (
@@ -24,52 +24,34 @@ const SaveIcon = () => (
 
 interface SettingsProps {
     setCurrentView: (view: View) => void;
-    yearlySettings: Record<string, YearSettings>;
-    setYearlySettings: (year: string, settings: YearSettings) => void;
+    costModelTable?: CostModelRow[];
+    setCostModelTable: (table: CostModelRow[]) => void;
+    generalSettings: GeneralSettings;
+    setGeneralSettings: (settings: GeneralSettings) => void;
     showToast: (message: string, type?: 'success' | 'error') => void;
     activeMode: AppMode;
 }
 
 const Settings: React.FC<SettingsProps> = ({ 
     setCurrentView,
-    yearlySettings,
-    setYearlySettings,
+    costModelTable,
+    setCostModelTable,
+    generalSettings,
+    setGeneralSettings,
     showToast,
     activeMode
 }) => {
-    const availableYears = Object.keys(yearlySettings).sort().reverse();
-    const [selectedYear, setSelectedYear] = useState(availableYears[0] || new Date().getFullYear().toString());
-    
-    const [localGeneralSettings, setLocalGeneralSettings] = useState<GeneralSettings>(
-        yearlySettings[selectedYear]?.generalSettings || (activeMode === 'conclusions' ? { urgency: 100 } : { urgency: 150 })
-    );
-    const [localCostModelTable, setLocalCostModelTable] = useState<CostModelRow[]>(
-        yearlySettings[selectedYear]?.costModelTable || []
-    );
-
-    useEffect(() => {
-        if (yearlySettings[selectedYear]) {
-            setLocalGeneralSettings(yearlySettings[selectedYear].generalSettings);
-            setLocalCostModelTable(yearlySettings[selectedYear].costModelTable || []);
-        }
-    }, [selectedYear, yearlySettings]);
-
+    const [localGeneralSettings, setLocalGeneralSettings] = useState<GeneralSettings>(generalSettings);
+    const [localCostModelTable, setLocalCostModelTable] = useState<CostModelRow[]>(costModelTable || []);
     const [newModelCount, setNewModelCount] = useState('');
 
-    const handleAddYear = () => {
-        const nextYear = (parseInt(selectedYear) + 1).toString();
-        if (yearlySettings[nextYear]) {
-            showToast(`Налаштування для ${nextYear} року вже існують.`, 'error');
-            return;
-        }
-        // Clone current year settings to the new year
-        setYearlySettings(nextYear, {
-            generalSettings: { ...localGeneralSettings },
-            costModelTable: localCostModelTable.map(row => ({ ...row }))
-        });
-        setSelectedYear(nextYear);
-        showToast(`Створено налаштування на ${nextYear} рік (скопійовано з ${selectedYear})`);
-    };
+    useEffect(() => {
+        setLocalGeneralSettings(generalSettings);
+    }, [generalSettings]);
+
+    useEffect(() => {
+        setLocalCostModelTable(costModelTable || []);
+    }, [costModelTable]);
 
     const handleAddRow = () => {
         if (!newModelCount || isNaN(Number(newModelCount)) || Number(newModelCount) <= 0) return;
@@ -94,39 +76,19 @@ const Settings: React.FC<SettingsProps> = ({
     };
 
     const handleSaveChanges = () => {
-        setYearlySettings(selectedYear, {
-            generalSettings: localGeneralSettings,
-            costModelTable: localCostModelTable
-        });
+        setGeneralSettings(localGeneralSettings);
+        setCostModelTable(localCostModelTable);
         showToast('Дані оновлено');
     };
 
     return (
         <div className="bg-white p-6 md:p-8 rounded-xl shadow-md dark:bg-gray-800 dark:text-gray-100">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <button onClick={() => setCurrentView('dashboard')} className="flex items-center text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 hover:dark:text-white">
-                    <BackArrowIcon />
-                    Повернутися назад
-                </button>
-                <div className="flex items-center gap-4">
-                    <div>
-                        <label htmlFor="year-select" className="text-sm font-medium mr-2">Рік тарифів:</label>
-                        <select 
-                            id="year-select"
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white"
-                        >
-                            {availableYears.length > 0 ? availableYears.map(y => <option key={y} value={y}>{y}</option>) : <option value="2025">2025</option>}
-                        </select>
-                    </div>
-                    <button onClick={handleAddYear} className="px-4 py-2 text-sm bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 dark:bg-indigo-900 dark:text-indigo-200">
-                        + Додати наступний рік
-                    </button>
-                </div>
-            </div>
+            <button onClick={() => setCurrentView('dashboard')} className="flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6 dark:text-gray-300 hover:dark:text-white">
+                <BackArrowIcon />
+                Повернутися назад
+            </button>
 
-            <h1 className="text-2xl font-bold mb-6 dark:text-white">Налаштування вартості на {selectedYear} рік</h1>
+            <h1 className="text-2xl font-bold mb-6 dark:text-white">Налаштування вартості</h1>
 
             {activeMode === 'conclusions' ? (
                 <>
@@ -266,7 +228,7 @@ const Settings: React.FC<SettingsProps> = ({
             <div className="mt-8 flex justify-end">
                 <button onClick={handleSaveChanges} className="flex items-center justify-center px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
                     <SaveIcon />
-                    Зберегти тарифи на {selectedYear} рік
+                    Зберегти тарифи
                 </button>
             </div>
         </div>

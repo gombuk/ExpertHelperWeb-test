@@ -1,5 +1,5 @@
 
-import type { Record as AppRecord, CostModelRow, GeneralSettings, YearSettings } from '../types';
+import type { Record as AppRecord, CostModelRow, GeneralSettings } from '../types';
 import type { AppMode } from '../App';
 
 interface CostCalculationData {
@@ -16,7 +16,6 @@ interface CostCalculationData {
     positions: number;
     urgency: boolean;
     units: number;
-    endDate: string; // Critical for yearly lookup
 
     // For certificates
     pages?: number;
@@ -25,130 +24,119 @@ interface CostCalculationData {
     certificateServiceType?: 'standard' | 'replacement' | 'reissuance' | 'duplicate';
 }
 
-const getCostForPositions = (positions: number, costs: Omit<CostModelRow, 'id' | 'models'>): number => {
-    if (positions <= 10) return Number(costs.upTo10) || 0;
-    if (positions <= 20) return Number(costs.upTo20) || 0;
-    if (positions <= 50) return Number(costs.upTo50) || 0;
-    return Number(costs.plus51) || 0;
-};
-
+/**
+ * Calculates the cost for a record based on provided data and settings.
+ */
 export const calculateCost = (
     data: CostCalculationData,
-    yearlySettings: Record<string, YearSettings>,
+    costModelTable: CostModelRow[] | undefined,
+    generalSettings: GeneralSettings,
     activeMode: AppMode
 ) => {
-    const recordYear = data.endDate ? data.endDate.substring(0, 4) : new Date().getFullYear().toString();
-    
-    // Find settings for the specific year or fallback to the latest available
-    let settings = yearlySettings[recordYear];
-    if (!settings) {
-        const availableYears = Object.keys(yearlySettings).sort();
-        const fallbackYear = availableYears.length > 0 ? availableYears[availableYears.length - 1] : "2025";
-        settings = yearlySettings[fallbackYear];
-    }
-
-    if (!settings) {
-        return { 
-            sumWithoutDiscount: 0, sumWithDiscount: 0, 
-            modelCost: 0, codeCostValue: 0, complexityCost: 0, urgencyCost: 0, pageCost: 0, discountMultiplier: 1,
-            mainCertCost: 0, positionsCost: 0, additionalPagesCost: 0, urgentMainCertCost: 0, urgentPositionsCost: 0, urgentAdditionalPagesCost: 0, urgencyMultiplier: 1
-        };
-    }
-
-    const { generalSettings, costModelTable = [] } = settings;
-    
-    let sumWithoutDiscount = 0;
-    let sumWithDiscount = 0;
-    let modelCost = 0;
-    let codeCostValue = 0;
-    let complexityCost = 0;
-    let urgencyCost = 0;
-    let pageCost = 0;
-    let discountMultiplier = 1;
-
-    let mainCertCost = 0;
-    let positionsCost = 0;
-    let additionalPagesCost = 0;
-    let urgentMainCertCost = 0;
-    let urgentPositionsCost = 0;
-    let urgentAdditionalPagesCost = 0;
-    let urgencyMultiplier = 1;
+    const results = { 
+        sumWithoutDiscount: 0, sumWithDiscount: 0, 
+        modelCost: 0, codeCostValue: 0, complexityCost: 0, urgencyCost: 0, pageCost: 0, discountMultiplier: 1,
+        mainCertCost: 0, positionsCost: 0, additionalPagesCost: 0, urgentMainCertCost: 0, urgentPositionsCost: 0, urgentAdditionalPagesCost: 0, urgencyMultiplier: 1
+    };
 
     if (data.isQuickRegistration) {
-        return { 
-            sumWithoutDiscount: 0, sumWithDiscount: 0, 
-            modelCost: 0, codeCostValue: 0, complexityCost: 0, urgencyCost: 0, pageCost: 0, discountMultiplier: 1,
-            mainCertCost: 0, positionsCost: 0, additionalPagesCost: 0, urgentMainCertCost: 0, urgentPositionsCost: 0, urgentAdditionalPagesCost: 0, urgencyMultiplier: 1
-        };
+        return results;
     }
 
+    const gs = generalSettings;
+
     if (activeMode === 'certificates') {
-        const gs = generalSettings;
-        urgencyMultiplier = data.urgency ? (1 + (gs.urgency || 0) / 100) : 1;
+        const urgencyMult = data.urgency ? (1 + (gs.urgency || 0) / 100) : 1;
+        results.urgencyMultiplier = urgencyMult;
+
         const isFullyProduced = data.productionType === 'fully_produced';
         const serviceType = data.certificateServiceType || 'standard';
 
-        const costPerAdditionalPosition = (isFullyProduced ? gs.fullyProduced_additionalPositionCost : gs.sufficientProcessing_additionalPositionCost) || 0;
-        const costPerAdditionalPage = gs.additionalPageCost || 0;
+        const posCostPerUnit = (isFullyProduced ? gs.fullyProduced_additionalPositionCost : gs.sufficientProcessing_additionalPositionCost) || 0;
+        const pageCostPerUnit = gs.additionalPageCost || 0;
         
-        if (serviceType === 'replacement') mainCertCost = gs.replacementCost || 0;
-        else if (serviceType === 'reissuance') mainCertCost = gs.reissuanceCost || 0;
-        else if (serviceType === 'duplicate') mainCertCost = gs.duplicateCost || 0;
-        else {
+        let baseCost = 0;
+        if (serviceType === 'replacement') {
+            baseCost = gs.replacementCost || 0;
+        } else if (serviceType === 'reissuance') {
+            baseCost = gs.reissuanceCost || 0;
+        } else if (serviceType === 'duplicate') {
+            baseCost = gs.duplicateCost || 0;
+        } else {
             const pages = data.pages || 0;
-            if (pages > 0 && pages <= 20) mainCertCost = (isFullyProduced ? gs.fullyProduced_upTo20PagesCost : gs.sufficientProcessing_upTo20PagesCost) || 0;
-            else if (pages >= 21 && pages <= 200) mainCertCost = (isFullyProduced ? gs.fullyProduced_from21To200PagesCost : gs.sufficientProcessing_from21To200PagesCost) || 0;
-            else if (pages >= 201) mainCertCost = (isFullyProduced ? gs.fullyProduced_plus201PagesCost : gs.sufficientProcessing_plus201PagesCost) || 0;
+            if (pages <= 20) {
+                baseCost = (isFullyProduced ? gs.fullyProduced_upTo20PagesCost : gs.sufficientProcessing_upTo20PagesCost) || 0;
+            } else if (pages <= 200) {
+                baseCost = (isFullyProduced ? gs.fullyProduced_from21To200PagesCost : gs.sufficientProcessing_from21To200PagesCost) || 0;
+            } else {
+                baseCost = (isFullyProduced ? gs.fullyProduced_plus201PagesCost : gs.sufficientProcessing_plus201PagesCost) || 0;
+            }
         }
         
-        urgentMainCertCost = mainCertCost * (data.units || 1) * urgencyMultiplier;
-        positionsCost = (data.positions || 0) * costPerAdditionalPosition;
-        urgentPositionsCost = positionsCost * urgencyMultiplier;
-        additionalPagesCost = (data.additionalPages || 0) * costPerAdditionalPage;
-        urgentAdditionalPagesCost = additionalPagesCost * urgencyMultiplier;
+        results.mainCertCost = baseCost;
+        results.urgentMainCertCost = baseCost * (data.units || 1) * urgencyMult;
+        results.positionsCost = (data.positions || 0) * posCostPerUnit;
+        results.urgentPositionsCost = results.positionsCost * urgencyMult;
+        results.additionalPagesCost = (data.additionalPages || 0) * pageCostPerUnit;
+        results.urgentAdditionalPagesCost = results.additionalPagesCost * urgencyMult;
 
-        sumWithoutDiscount = urgentMainCertCost + urgentPositionsCost + urgentAdditionalPagesCost;
-        sumWithDiscount = sumWithoutDiscount;
+        results.sumWithoutDiscount = results.urgentMainCertCost + results.urgentPositionsCost + results.urgentAdditionalPagesCost;
+        results.sumWithDiscount = results.sumWithoutDiscount;
 
-    } else { // Conclusions
-        if (data.discount === 'Зі знижкою') discountMultiplier = (1 - ((generalSettings.discount || 0) / 100));
+    } else {
+        let discountMult = 1;
+        if (data.discount === 'Зі знижкою') {
+            discountMult = (1 - ((gs.discount || 0) / 100));
+        }
+        results.discountMultiplier = discountMult;
 
         if (data.conclusionType === 'custom_cost') {
-            sumWithoutDiscount = data.customCost || 0;
-            sumWithDiscount = sumWithoutDiscount * discountMultiplier;
+            results.sumWithoutDiscount = data.customCost || 0;
+            results.sumWithDiscount = results.sumWithoutDiscount * discountMult;
         } else if (data.conclusionType === 'contractual') {
-            pageCost = (data.pages || 0) * (generalSettings.contractualPageCost || 0);
-            codeCostValue = (data.codes || 0) * (generalSettings.codeCost || 0);
-            sumWithoutDiscount = pageCost + codeCostValue;
-            sumWithDiscount = sumWithoutDiscount * discountMultiplier;
-        } else {
-            let modelCostRow = costModelTable.find(row => row.models === (data.models || 0));
-            if (!modelCostRow && costModelTable.length > 0) {
-                const suitableRows = costModelTable.filter(row => row.models <= (data.models || 0));
-                modelCostRow = suitableRows.length > 0 ? suitableRows.reduce((prev, current) => (prev.models > current.models) ? prev : current) : costModelTable.reduce((prev, current) => (prev.models < current.models) ? prev : current);
+            results.pageCost = (data.pages || 0) * (gs.contractualPageCost || 0);
+            results.codeCostValue = (data.codes || 0) * (gs.codeCost || 0);
+            results.sumWithoutDiscount = results.pageCost + results.codeCostValue;
+            results.sumWithDiscount = results.sumWithoutDiscount * discountMult;
+        } else if (costModelTable) {
+            let selectedRow = costModelTable.find(row => row.models === (data.models || 0));
+            if (!selectedRow && costModelTable.length > 0) {
+                 const smallerRows = costModelTable.filter(r => r.models <= (data.models || 0));
+                 if (smallerRows.length > 0) {
+                     selectedRow = smallerRows.sort((a,b) => b.models - a.models)[0];
+                 } else {
+                     selectedRow = [...costModelTable].sort((a,b) => a.models - b.models)[0];
+                 }
             }
-            
-            if (modelCostRow) {
-                modelCost = getCostForPositions(data.positions, modelCostRow);
-                codeCostValue = (data.codes || 0) * (generalSettings.codeCost || 0);
-                let currentCost = modelCost + codeCostValue;
+
+            if (selectedRow) {
+                const pos = data.positions || 0;
+                let basePrice = 0;
+                if (pos <= 10) basePrice = Number(selectedRow.upTo10) || 0;
+                else if (pos <= 20) basePrice = Number(selectedRow.upTo20) || 0;
+                else if (pos <= 50) basePrice = Number(selectedRow.upTo50) || 0;
+                else basePrice = Number(selectedRow.plus51) || 0;
+
+                results.modelCost = basePrice;
+                results.codeCostValue = (data.codes || 0) * (gs.codeCost || 0);
+                
+                let subTotal = basePrice + results.codeCostValue;
+                
                 if (data.complexity) {
-                    complexityCost = currentCost * ((generalSettings.complexity || 0) / 100);
-                    currentCost += complexityCost;
+                    results.complexityCost = subTotal * ((gs.complexity || 0) / 100);
+                    subTotal += results.complexityCost;
                 }
+                
                 if (data.urgency) {
-                    urgencyCost = currentCost * (generalSettings.urgency / 100);
-                    currentCost += urgencyCost;
+                    results.urgencyCost = subTotal * ((gs.urgency || 0) / 100);
+                    subTotal += results.urgencyCost;
                 }
-                sumWithoutDiscount = currentCost;
-                sumWithDiscount = sumWithoutDiscount * discountMultiplier;
+                
+                results.sumWithoutDiscount = subTotal;
+                results.sumWithDiscount = subTotal * discountMult;
             }
         }
     }
 
-    return { 
-        sumWithoutDiscount, sumWithDiscount, 
-        modelCost, codeCostValue, complexityCost, urgencyCost, pageCost, discountMultiplier,
-        mainCertCost, positionsCost, additionalPagesCost, urgentMainCertCost, urgentPositionsCost, urgentAdditionalPagesCost, urgencyMultiplier
-    };
+    return results;
 };
