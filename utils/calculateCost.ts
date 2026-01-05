@@ -1,5 +1,5 @@
 
-import type { Record as AppRecord, CostModelRow, GeneralSettings } from '../types';
+import type { Record as AppRecord, CostModelRow, GeneralSettings, YearlySettings } from '../types';
 import type { AppMode } from '../App';
 
 interface CostCalculationData {
@@ -16,6 +16,7 @@ interface CostCalculationData {
     positions: number;
     urgency: boolean;
     units: number;
+    endDate: string; // Used to determine the year
 
     // For certificates
     pages?: number;
@@ -25,12 +26,11 @@ interface CostCalculationData {
 }
 
 /**
- * Calculates the cost for a record based on provided data and settings.
+ * Calculates the cost for a record based on provided data and yearly settings.
  */
 export const calculateCost = (
     data: CostCalculationData,
-    costModelTable: CostModelRow[] | undefined,
-    generalSettings: GeneralSettings,
+    yearlySettings: Record<string, YearlySettings>,
     activeMode: AppMode
 ) => {
     const results = { 
@@ -43,9 +43,21 @@ export const calculateCost = (
         return results;
     }
 
-    const gs = generalSettings;
+    // Determine the year from endDate
+    const recordYear = data.endDate ? data.endDate.split('-')[0] : new Date().getFullYear().toString();
+    
+    // Fallback to the latest available year if the specific year is missing
+    const availableYears = Object.keys(yearlySettings).sort((a, b) => b.localeCompare(a));
+    const selectedYear = yearlySettings[recordYear] ? recordYear : (availableYears[0] || recordYear);
+    const settings = yearlySettings[selectedYear];
+
+    if (!settings) return results;
+
+    const gs = settings.generalSettings;
+    const costModelTable = settings.costModelTable;
 
     if (activeMode === 'certificates') {
+        // --- Certificate Logic ---
         const urgencyMult = data.urgency ? (1 + (gs.urgency || 0) / 100) : 1;
         results.urgencyMultiplier = urgencyMult;
 
@@ -75,8 +87,10 @@ export const calculateCost = (
         
         results.mainCertCost = baseCost;
         results.urgentMainCertCost = baseCost * (data.units || 1) * urgencyMult;
+        
         results.positionsCost = (data.positions || 0) * posCostPerUnit;
         results.urgentPositionsCost = results.positionsCost * urgencyMult;
+        
         results.additionalPagesCost = (data.additionalPages || 0) * pageCostPerUnit;
         results.urgentAdditionalPagesCost = results.additionalPagesCost * urgencyMult;
 
@@ -84,6 +98,7 @@ export const calculateCost = (
         results.sumWithDiscount = results.sumWithoutDiscount;
 
     } else {
+        // --- Conclusion Logic ---
         let discountMult = 1;
         if (data.discount === 'Зі знижкою') {
             discountMult = (1 - ((gs.discount || 0) / 100));

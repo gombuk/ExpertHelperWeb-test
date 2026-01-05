@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import type { CostModelRow, GeneralSettings } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import type { CostModelRow, GeneralSettings, YearlySettings } from '../types';
 import type { View, AppMode } from '../App';
 
 const BackArrowIcon = () => (
@@ -24,71 +24,122 @@ const SaveIcon = () => (
 
 interface SettingsProps {
     setCurrentView: (view: View) => void;
-    costModelTable?: CostModelRow[];
-    setCostModelTable: (table: CostModelRow[]) => void;
-    generalSettings: GeneralSettings;
-    setGeneralSettings: (settings: GeneralSettings) => void;
+    yearlySettings: Record<string, YearlySettings>;
+    setYearlySettings: (year: string, settings: YearlySettings) => void;
     showToast: (message: string, type?: 'success' | 'error') => void;
     activeMode: AppMode;
 }
 
 const Settings: React.FC<SettingsProps> = ({ 
     setCurrentView,
-    costModelTable,
-    setCostModelTable,
-    generalSettings,
-    setGeneralSettings,
+    yearlySettings,
+    setYearlySettings,
     showToast,
     activeMode
 }) => {
-    const [localGeneralSettings, setLocalGeneralSettings] = useState<GeneralSettings>(generalSettings);
-    const [localCostModelTable, setLocalCostModelTable] = useState<CostModelRow[]>(costModelTable || []);
+    const years = useMemo(() => Object.keys(yearlySettings).sort((a, b) => b.localeCompare(a)), [yearlySettings]);
+    const [selectedYear, setSelectedYear] = useState(years[0] || new Date().getFullYear().toString());
+    const [localSettings, setLocalSettings] = useState<YearlySettings | null>(null);
     const [newModelCount, setNewModelCount] = useState('');
+    const [newYearInput, setNewYearInput] = useState('');
+    const [showNewYearModal, setShowNewYearModal] = useState(false);
 
     useEffect(() => {
-        setLocalGeneralSettings(generalSettings);
-    }, [generalSettings]);
-
-    useEffect(() => {
-        setLocalCostModelTable(costModelTable || []);
-    }, [costModelTable]);
+        if (yearlySettings[selectedYear]) {
+            setLocalSettings(JSON.parse(JSON.stringify(yearlySettings[selectedYear])));
+        }
+    }, [selectedYear, yearlySettings]);
 
     const handleAddRow = () => {
-        if (!newModelCount || isNaN(Number(newModelCount)) || Number(newModelCount) <= 0) return;
+        if (!localSettings || !newModelCount || isNaN(Number(newModelCount)) || Number(newModelCount) <= 0) return;
         const newRow: CostModelRow = { id: Date.now(), models: Number(newModelCount), upTo10: '', upTo20: '', upTo50: '', plus51: '' };
-        setLocalCostModelTable([...localCostModelTable, newRow]);
+        setLocalSettings({
+            ...localSettings,
+            costModelTable: [...(localSettings.costModelTable || []), newRow]
+        });
         setNewModelCount('');
     };
 
     const handleDeleteRow = (id: number) => {
-        setLocalCostModelTable(localCostModelTable.filter(row => row.id !== id));
+        if (!localSettings) return;
+        setLocalSettings({
+            ...localSettings,
+            costModelTable: (localSettings.costModelTable || []).filter(row => row.id !== id)
+        });
     };
     
     const handleCostTableInputChange = (id: number, field: keyof Omit<CostModelRow, 'id' | 'models'>, value: string) => {
-        setLocalCostModelTable(localCostModelTable.map(row => row.id === id ? { ...row, [field]: value } : row));
+        if (!localSettings) return;
+        setLocalSettings({
+            ...localSettings,
+            costModelTable: (localSettings.costModelTable || []).map(row => row.id === id ? { ...row, [field]: value } : row)
+        });
     };
     
     const handleGeneralSettingsChange = (field: keyof GeneralSettings, value: string) => {
+        if (!localSettings) return;
         const numValue = Number(value);
         if (!isNaN(numValue)) {
-            setLocalGeneralSettings(prev => ({ ...prev, [field]: numValue }));
+            setLocalSettings({
+                ...localSettings,
+                generalSettings: { ...localSettings.generalSettings, [field]: numValue }
+            });
         }
     };
 
     const handleSaveChanges = () => {
-        setGeneralSettings(localGeneralSettings);
-        setCostModelTable(localCostModelTable);
-        showToast('Дані оновлено');
+        if (localSettings) {
+            setYearlySettings(selectedYear, localSettings);
+            showToast(`Дані для ${selectedYear} року оновлено`);
+        }
     };
+
+    const handleAddNewYear = () => {
+        if (!newYearInput || yearlySettings[newYearInput]) {
+            showToast('Цей рік вже існує або введено некоректно', 'error');
+            return;
+        }
+        // Clone from current selected year or defaults
+        const sourceSettings = localSettings || (years[0] ? yearlySettings[years[0]] : null);
+        if (sourceSettings) {
+            setYearlySettings(newYearInput, JSON.parse(JSON.stringify(sourceSettings)));
+            setSelectedYear(newYearInput);
+            setShowNewYearModal(false);
+            setNewYearInput('');
+            showToast(`Налаштування для ${newYearInput} року створено`);
+        }
+    };
+
+    if (!localSettings) return <div>Завантаження...</div>;
 
     return (
         <div className="bg-white p-6 md:p-8 rounded-xl shadow-md dark:bg-gray-800 dark:text-gray-100">
-            <button onClick={() => setCurrentView('dashboard')} className="flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6 dark:text-gray-300 hover:dark:text-white">
-                <BackArrowIcon />
-                Повернутися назад
-            </button>
+            <div className="flex justify-between items-center mb-6">
+                <button onClick={() => setCurrentView('dashboard')} className="flex items-center text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 hover:dark:text-white">
+                    <BackArrowIcon />
+                    Повернутися назад
+                </button>
+                <div className="flex items-center gap-4">
+                    <label className="text-sm font-semibold">Виберіть рік тарифів:</label>
+                    <select 
+                        value={selectedYear} 
+                        onChange={(e) => setSelectedYear(e.target.value)} 
+                        className="px-3 py-1 border rounded-md dark:bg-gray-700 dark:text-white"
+                    >
+                        {years.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                    <button 
+                        onClick={() => setShowNewYearModal(true)}
+                        className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-100"
+                    >
+                        + Новий рік
+                    </button>
+                </div>
+            </div>
 
-            <h1 className="text-2xl font-bold mb-6 dark:text-white">Налаштування вартості</h1>
+            <h1 className="text-2xl font-bold mb-6 dark:text-white">
+                Налаштування вартості ({selectedYear} рік)
+            </h1>
 
             {activeMode === 'conclusions' ? (
                 <>
@@ -97,23 +148,23 @@ const Settings: React.FC<SettingsProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Вартість коду (грн)</label>
-                                <input type="number" value={localGeneralSettings.codeCost || ''} onChange={(e) => handleGeneralSettingsChange('codeCost', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.codeCost || ''} onChange={(e) => handleGeneralSettingsChange('codeCost', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Знижка (%)</label>
-                                <input type="number" value={localGeneralSettings.discount || ''} onChange={(e) => handleGeneralSettingsChange('discount', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.discount || ''} onChange={(e) => handleGeneralSettingsChange('discount', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Складність (%)</label>
-                                <input type="number" value={localGeneralSettings.complexity || ''} onChange={(e) => handleGeneralSettingsChange('complexity', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.complexity || ''} onChange={(e) => handleGeneralSettingsChange('complexity', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Терміновість (%)</label>
-                                <input type="number" value={localGeneralSettings.urgency} onChange={(e) => handleGeneralSettingsChange('urgency', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.urgency} onChange={(e) => handleGeneralSettingsChange('urgency', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Вартість сторінки (договірний)</label>
-                                <input type="number" value={localGeneralSettings.contractualPageCost || ''} onChange={(e) => handleGeneralSettingsChange('contractualPageCost', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.contractualPageCost || ''} onChange={(e) => handleGeneralSettingsChange('contractualPageCost', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                         </div>
                     </section>
@@ -138,7 +189,7 @@ const Settings: React.FC<SettingsProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                                    {localCostModelTable.map((row) => (
+                                    {(localSettings.costModelTable || []).map((row) => (
                                         <tr key={row.id}>
                                             <td className="px-6 py-4 text-sm font-medium dark:text-white">{row.models}</td>
                                             <td className="px-6 py-4"><input type="number" value={row.upTo10} onChange={(e) => handleCostTableInputChange(row.id, 'upTo10', e.target.value)} className="w-full px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white"/></td>
@@ -160,19 +211,19 @@ const Settings: React.FC<SettingsProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">До 20 ст.</label>
-                                <input type="number" value={localGeneralSettings.fullyProduced_upTo20PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('fullyProduced_upTo20PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.fullyProduced_upTo20PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('fullyProduced_upTo20PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">21-200 ст.</label>
-                                <input type="number" value={localGeneralSettings.fullyProduced_from21To200PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('fullyProduced_from21To200PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.fullyProduced_from21To200PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('fullyProduced_from21To200PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">201+ ст.</label>
-                                <input type="number" value={localGeneralSettings.fullyProduced_plus201PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('fullyProduced_plus201PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.fullyProduced_plus201PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('fullyProduced_plus201PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">Дод. позиція</label>
-                                <input type="number" value={localGeneralSettings.fullyProduced_additionalPositionCost || ''} onChange={(e) => handleGeneralSettingsChange('fullyProduced_additionalPositionCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.fullyProduced_additionalPositionCost || ''} onChange={(e) => handleGeneralSettingsChange('fullyProduced_additionalPositionCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                         </div>
                     </section>
@@ -181,19 +232,19 @@ const Settings: React.FC<SettingsProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">До 20 ст.</label>
-                                <input type="number" value={localGeneralSettings.sufficientProcessing_upTo20PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('sufficientProcessing_upTo20PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.sufficientProcessing_upTo20PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('sufficientProcessing_upTo20PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">21-200 ст.</label>
-                                <input type="number" value={localGeneralSettings.sufficientProcessing_from21To200PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('sufficientProcessing_from21To200PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.sufficientProcessing_from21To200PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('sufficientProcessing_from21To200PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">201+ ст.</label>
-                                <input type="number" value={localGeneralSettings.sufficientProcessing_plus201PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('sufficientProcessing_plus201PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.sufficientProcessing_plus201PagesCost || ''} onChange={(e) => handleGeneralSettingsChange('sufficientProcessing_plus201PagesCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">Дод. позиція</label>
-                                <input type="number" value={localGeneralSettings.sufficientProcessing_additionalPositionCost || ''} onChange={(e) => handleGeneralSettingsChange('sufficientProcessing_additionalPositionCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.sufficientProcessing_additionalPositionCost || ''} onChange={(e) => handleGeneralSettingsChange('sufficientProcessing_additionalPositionCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                         </div>
                     </section>
@@ -202,23 +253,23 @@ const Settings: React.FC<SettingsProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">Замінний</label>
-                                <input type="number" value={localGeneralSettings.replacementCost || ''} onChange={(e) => handleGeneralSettingsChange('replacementCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.replacementCost || ''} onChange={(e) => handleGeneralSettingsChange('replacementCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">Переоформлення</label>
-                                <input type="number" value={localGeneralSettings.reissuanceCost || ''} onChange={(e) => handleGeneralSettingsChange('reissuanceCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.reissuanceCost || ''} onChange={(e) => handleGeneralSettingsChange('reissuanceCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">Дублікат</label>
-                                <input type="number" value={localGeneralSettings.duplicateCost || ''} onChange={(e) => handleGeneralSettingsChange('duplicateCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.duplicateCost || ''} onChange={(e) => handleGeneralSettingsChange('duplicateCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">Дод. аркуш</label>
-                                <input type="number" value={localGeneralSettings.additionalPageCost || ''} onChange={(e) => handleGeneralSettingsChange('additionalPageCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.additionalPageCost || ''} onChange={(e) => handleGeneralSettingsChange('additionalPageCost', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                             <div>
                                 <label className="text-sm font-medium dark:text-gray-200">Терміновість (%)</label>
-                                <input type="number" value={localGeneralSettings.urgency} onChange={(e) => handleGeneralSettingsChange('urgency', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
+                                <input type="number" value={localSettings.generalSettings.urgency} onChange={(e) => handleGeneralSettingsChange('urgency', e.target.value)} className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white" />
                             </div>
                         </div>
                     </section>
@@ -228,9 +279,29 @@ const Settings: React.FC<SettingsProps> = ({
             <div className="mt-8 flex justify-end">
                 <button onClick={handleSaveChanges} className="flex items-center justify-center px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
                     <SaveIcon />
-                    Зберегти тарифи
+                    Зберегти тарифи для {selectedYear}
                 </button>
             </div>
+
+            {/* Modal for adding new year */}
+            {showNewYearModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex justify-center items-center">
+                    <div className="bg-white p-6 rounded-xl shadow-xl dark:bg-gray-800 dark:text-white w-80">
+                        <h3 className="text-lg font-bold mb-4">Додати новий рік</h3>
+                        <input 
+                            type="number" 
+                            placeholder="Наприклад: 2026" 
+                            value={newYearInput}
+                            onChange={(e) => setNewYearInput(e.target.value)}
+                            className="w-full px-3 py-2 border rounded mb-4 dark:bg-gray-700"
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setShowNewYearModal(false)} className="px-4 py-2 text-sm text-gray-500">Скасувати</button>
+                            <button onClick={handleAddNewYear} className="px-4 py-2 text-sm bg-blue-600 text-white rounded">Створити</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

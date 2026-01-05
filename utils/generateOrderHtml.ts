@@ -1,5 +1,5 @@
 
-import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings } from '../types';
+import type { Record as AppRecord, Firm, CostModelRow, GeneralSettings, YearlySettings } from '../types';
 import { calculateCost } from './calculateCost';
 import type { AppMode } from '../App';
 
@@ -21,8 +21,7 @@ const formatCurrencyForReport = (value: number) => new Intl.NumberFormat('uk-UA'
 export const generateMonthlyReportHtml = (
     allRecords: AppRecord[],
     firms: Firm[],
-    costModelTable: CostModelRow[],
-    generalSettings: GeneralSettings,
+    yearlySettings: Record<string, YearlySettings>,
     selectedMonth: string,
     activeMode: AppMode
 ): string => {
@@ -35,7 +34,7 @@ export const generateMonthlyReportHtml = (
     const recordsWithCost = allRecords
         .filter(record => record.endDate.substring(0, 7) === selectedMonth)
         .map(record => {
-            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(record, costModelTable, generalSettings, activeMode);
+            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(record, yearlySettings, activeMode);
             return { ...record, calculatedSum: isConclusions ? sumWithDiscount : sumWithoutDiscount };
         })
         .sort((a, b) => a.expert.localeCompare(b.expert) || a.companyName.localeCompare(b.companyName));
@@ -52,18 +51,18 @@ export const generateMonthlyReportHtml = (
     return `<html><head><title>${reportTitle}</title><style>body{font-family:serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:5px}th{background:#f2f2f2}</style></head><body><h1>${reportTitle}</h1><table><thead><tr><th>Замовник</th><th>№ наряду</th><th>Кількість</th><th>Дата видачі</th><th>Сума, грн</th></tr></thead><tbody>${tableRowsHtml}<tr><td colspan="4">Всього:</td><td style="text-align:right">${formatCurrencyForReport(grandTotalSum)}</td></tr></tbody></table></body></html>`;
 };
 
-export const generateOrderHtml = (record: AppRecord, firm: Firm, costModelTable: CostModelRow[], generalSettings: GeneralSettings) => {
-    const { sumWithDiscount } = calculateCost(record, costModelTable, generalSettings, 'conclusions');
+export const generateOrderHtml = (record: AppRecord, firm: Firm, yearlySettings: Record<string, YearlySettings>) => {
+    const { sumWithDiscount } = calculateCost(record, yearlySettings, 'conclusions');
     const vat = sumWithDiscount * 0.2;
     return `<html><head><style>body{font-family:serif;padding:20px}</style></head><body><h1>Наряд №${record.registrationNumber}</h1><p>Компанія: ${firm.name}</p><p>Сума: ${formatCurrencyForReport(sumWithDiscount + vat)} грн</p><button onclick="window.print()">Друк</button></body></html>`;
 };
 
-export const generateCertificateOrderHtml = (record: AppRecord, firm: Firm, generalSettings: GeneralSettings) => {
-    const { sumWithoutDiscount } = calculateCost(record, undefined, generalSettings, 'certificates');
+export const generateCertificateOrderHtml = (record: AppRecord, firm: Firm, yearlySettings: Record<string, YearlySettings>) => {
+    const { sumWithoutDiscount } = calculateCost(record, yearlySettings, 'certificates');
     return `<html><head><style>body{font-family:serif;padding:20px}</style></head><body><h1>Сертифікат №${record.registrationNumber}</h1><p>Замовник: ${firm.name}</p><p>Сума: ${formatCurrencyForReport(sumWithoutDiscount * 1.2)} грн</p></body></html>`;
 };
 
-export const generateCertificateActHtml = (record: AppRecord, firm: Firm, generalSettings: GeneralSettings) => { return "<h1>Act HTML placeholder</h1>"; };
+export const generateCertificateActHtml = (record: AppRecord, firm: Firm, yearlySettings: Record<string, YearlySettings>) => { return "<h1>Act HTML placeholder</h1>"; };
 export const generateFirmsHtml = (firms: Firm[], activeMode: string) => { return "<h1>Firms HTML placeholder</h1>"; };
 export const generateRecordsHtml = (records: any[], activeMode: string) => { return "<h1>Records List HTML placeholder</h1>"; };
 export const generateJournalHtml = (records: any[], firms: Firm[], activeMode: string) => { return "<h1>Journal HTML placeholder</h1>"; };

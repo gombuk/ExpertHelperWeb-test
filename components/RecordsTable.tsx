@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import type { Record as AppRecord, Firm, CurrentUser, EditingActivity, GeneralSettings, CostModelRow } from '../types';
+import type { Record as AppRecord, Firm, CurrentUser, EditingActivity, GeneralSettings, CostModelRow, YearlySettings } from '../types';
 import RecordModal from './AddRecordModal';
 import RecordInfoModal from './RecordInfoModal';
 import { calculateCost } from '../utils/calculateCost';
@@ -17,8 +17,7 @@ interface RecordsTableProps {
     onDeleteMultipleRecords: (ids: number[]) => void;
     firms: Firm[];
     experts: string[];
-    costModelTable: CostModelRow[] | undefined;
-    generalSettings: GeneralSettings;
+    yearlySettings: Record<string, YearlySettings>;
     showToast: (message: string, type?: 'success' | 'error') => void;
     activeMode: AppMode;
     selectedMonth: string;
@@ -91,8 +90,7 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     onDeleteMultipleRecords, 
     firms, 
     experts, 
-    costModelTable, 
-    generalSettings,
+    yearlySettings, 
     showToast, 
     activeMode, 
     selectedMonth,
@@ -135,21 +133,21 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     const handleGenerateOrder = (record: AppRecord) => {
         const firm = firms.find(f => f.name === record.companyName);
         if (!firm) { showToast('Фірму не знайдено.', 'error'); return; }
-        const orderHtml = generateOrderHtml(record, firm, costModelTable || [], generalSettings);
+        const orderHtml = generateOrderHtml(record, firm, yearlySettings);
         const newWindow = window.open('', '_blank');
         if (newWindow) { newWindow.document.write(orderHtml); newWindow.document.close(); }
     };
     
     const handleGenerateCertificateOrder = (record: AppRecord) => {
         let firm = firms.find(f => f.name === record.companyName) || { id: 0, name: record.companyName, address: '—', directorName: record.companyName, edrpou: '—', taxNumber: '—', productName: '' };
-        const orderHtml = generateCertificateOrderHtml(record, firm, generalSettings);
+        const orderHtml = generateCertificateOrderHtml(record, firm, yearlySettings);
         const newWindow = window.open('', '_blank');
         if (newWindow) { newWindow.document.write(orderHtml); newWindow.document.close(); }
     };
 
     const handleGenerateCertificateAct = (record: AppRecord) => {
         let firm = firms.find(f => f.name === record.companyName) || { id: 0, name: record.companyName, address: '—', directorName: record.companyName, edrpou: '—', taxNumber: '—', productName: '' };
-        const actHtml = generateCertificateActHtml(record, firm, generalSettings);
+        const actHtml = generateCertificateActHtml(record, firm, yearlySettings);
         const newWindow = window.open('', '_blank');
         if (newWindow) { newWindow.document.write(actHtml); newWindow.document.close(); }
     };
@@ -161,7 +159,7 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
     };
 
     const handleGenerateMonthlyReport = () => {
-        const reportHtml = generateMonthlyReportHtml(allRecords, firms, costModelTable || [], generalSettings, selectedMonth, activeMode);
+        const reportHtml = generateMonthlyReportHtml(allRecords, firms, yearlySettings, selectedMonth, activeMode);
         const newWindow = window.open('', '_blank');
         if (newWindow) { newWindow.document.write(reportHtml); newWindow.document.close(); }
     };
@@ -174,11 +172,10 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
 
     const recordsWithCost = useMemo(() => {
         return records.map(record => {
-            const costData = { ...record };
-            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
+            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(record, yearlySettings, activeMode);
             return { ...record, sumWithoutDiscount, sumWithDiscount };
         });
-    }, [records, costModelTable, generalSettings, activeMode]);
+    }, [records, yearlySettings, activeMode]);
 
     const filteredRecords = useMemo(() => {
         if (!searchTerm) return recordsWithCost;
@@ -306,8 +303,7 @@ const RecordsTable: React.FC<RecordsTableProps> = ({
                 recordToEdit={recordToEdit} 
                 firms={firms} 
                 experts={experts} 
-                costModelTable={costModelTable}
-                generalSettings={generalSettings}
+                yearlySettings={yearlySettings}
                 showToast={showToast} 
                 activeMode={activeMode} 
                 allRecords={allRecords} 

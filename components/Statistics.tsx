@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import StatCard from './StatCard';
-import type { Record as AppRecord, MonthlyPlan, CurrentUser, GeneralSettings, CostModelRow } from '../types';
+import type { Record as AppRecord, MonthlyPlan, CurrentUser, YearlySettings } from '../types';
 import { calculateCost } from '../utils/calculateCost';
 import type { AppMode } from '../App';
 
@@ -13,8 +13,7 @@ const ChartIcon = () => (
 
 interface StatisticsProps {
     records: AppRecord[];
-    costModelTable: CostModelRow[] | undefined;
-    generalSettings: GeneralSettings;
+    yearlySettings: Record<string, YearlySettings>;
     experts: string[];
     selectedExpert: string;
     setSelectedExpert: (expert: string) => void;
@@ -32,8 +31,7 @@ const formatCurrency = (value: number) => {
 
 const Statistics: React.FC<StatisticsProps> = ({ 
     records, 
-    costModelTable,
-    generalSettings,
+    yearlySettings,
     experts,
     selectedExpert,
     setSelectedExpert,
@@ -49,21 +47,7 @@ const Statistics: React.FC<StatisticsProps> = ({
 
     useEffect(() => {
         const totals = records.reduce((acc, record) => {
-            const costData = {
-                models: record.models,
-                positions: record.positions,
-                codes: record.codes,
-                complexity: record.complexity,
-                urgency: record.urgency,
-                discount: record.discount,
-                pages: record.pages,
-                units: record.units,
-                productionType: record.productionType,
-                certificateServiceType: record.certificateServiceType,
-                conclusionType: record.conclusionType,
-                customCost: record.customCost
-            };
-            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
+            const { sumWithoutDiscount, sumWithDiscount } = calculateCost(record, yearlySettings, activeMode);
             acc.totalWithoutDiscount += sumWithoutDiscount;
             acc.totalWithDiscount += sumWithDiscount;
             return acc;
@@ -72,27 +56,13 @@ const Statistics: React.FC<StatisticsProps> = ({
         setTotalWithoutDiscount(totals.totalWithoutDiscount);
         setTotalWithDiscount(totals.totalWithDiscount);
 
-    }, [records, costModelTable, generalSettings, activeMode]);
+    }, [records, yearlySettings, activeMode]);
 
     const completedCount = records.filter(r => r.status === 'Проведено').length;
     const notCompletedCount = records.filter(r => r.status === 'Не проведено').length;
 
     const totalCompletedOverall = records.reduce((acc, record) => {
-        const costData = {
-            models: record.models,
-            positions: record.positions,
-            codes: record.codes,
-            complexity: record.complexity,
-            urgency: record.urgency,
-            discount: record.discount,
-            pages: record.pages,
-            units: record.units,
-            productionType: record.productionType,
-            certificateServiceType: record.certificateServiceType,
-            conclusionType: record.conclusionType,
-            customCost: record.customCost
-        };
-        const { sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
+        const { sumWithDiscount } = calculateCost(record, yearlySettings, activeMode);
         return acc + sumWithDiscount;
     }, 0);
 
@@ -146,21 +116,7 @@ const Statistics: React.FC<StatisticsProps> = ({
                      {monthlyPlan.expertPlans.map(plan => {
                          const expertRecords = records.filter(r => r.expert === plan.name);
                          const totalCompleted = expertRecords.reduce((acc, record) => {
-                             const costData = {
-                                models: record.models,
-                                positions: record.positions,
-                                codes: record.codes,
-                                complexity: record.complexity,
-                                urgency: record.urgency,
-                                discount: record.discount,
-                                pages: record.pages,
-                                units: record.units,
-                                productionType: record.productionType,
-                                certificateServiceType: record.certificateServiceType,
-                                conclusionType: record.conclusionType,
-                                customCost: record.customCost
-                             };
-                              const { sumWithDiscount } = calculateCost(costData, costModelTable, generalSettings, activeMode);
+                              const { sumWithDiscount } = calculateCost(record, yearlySettings, activeMode);
                               return acc + sumWithDiscount;
                          }, 0);
                          const planAmount = Number(plan.planAmount) || 0;

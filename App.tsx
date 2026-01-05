@@ -9,7 +9,7 @@ import PlanSettings from './components/PlanSettings';
 import Toast from './components/Toast';
 import Login from './components/Login';
 import UserManagement from './components/UserManagement';
-import { Record as AppRecord, CostModelRow, GeneralSettings, Firm, MonthlyPlan, CurrentUser, User, EditingActivity } from './types';
+import { Record as AppRecord, CostModelRow, GeneralSettings, Firm, MonthlyPlan, CurrentUser, User, EditingActivity, YearlySettings } from './types';
 
 export type View = 'dashboard' | 'settings' | 'firms' | 'plan' | 'user_management';
 export type AppMode = 'conclusions' | 'certificates';
@@ -17,8 +17,7 @@ export type Theme = 'light' | 'dark';
 
 interface ModeData {
   records: AppRecord[];
-  costModelTable?: CostModelRow[];
-  generalSettings: GeneralSettings;
+  yearlySettings: Record<string, YearlySettings>;
   monthlyPlans: Record<string, MonthlyPlan>;
   firms: Firm[];
 }
@@ -28,45 +27,55 @@ interface AppData {
   certificates: ModeData;
 }
 
+const defaultYear = new Date().getFullYear().toString();
+
 const initialAppData: AppData = {
   conclusions: {
     records: [],
-    costModelTable: [
-      { id: 1, models: 1, upTo10: "1200", upTo20: "1260", upTo50: "1320", plus51: "1350" },
-      { id: 2, models: 2, upTo10: "1270", upTo20: "1330", upTo50: "1390", plus51: "1420" },
-      { id: 3, models: 3, upTo10: "1340", upTo20: "1400", upTo50: "1460", plus51: "1490" },
-      { id: 4, models: 4, upTo10: "1410", upTo20: "1470", upTo50: "1530", plus51: "1560" },
-      { id: 5, models: 5, upTo10: "1480", upTo20: "1540", upTo50: "1600", plus51: "1630" },
-      { id: 6, models: 6, upTo10: "1550", upTo20: "1610", upTo50: "1670", plus51: "1700" },
-      { id: 7, models: 10, upTo10: "1800", upTo20: "1900", upTo50: "2000", plus51: "2100" },
-      { id: 8, models: 14, upTo10: "2200", upTo20: "2300", upTo50: "2400", plus51: "2500" }
-    ],
-    generalSettings: {
-      urgency: 100,
-      codeCost: 180,
-      discount: 10,
-      complexity: 30,
-      contractualPageCost: 1560
+    yearlySettings: {
+      [defaultYear]: {
+        costModelTable: [
+          { id: 1, models: 1, upTo10: "1200", upTo20: "1260", upTo50: "1320", plus51: "1350" },
+          { id: 2, models: 2, upTo10: "1270", upTo20: "1330", upTo50: "1390", plus51: "1420" },
+          { id: 3, models: 3, upTo10: "1340", upTo20: "1400", upTo50: "1460", plus51: "1490" },
+          { id: 4, models: 4, upTo10: "1410", upTo20: "1470", upTo50: "1530", plus51: "1560" },
+          { id: 5, models: 5, upTo10: "1480", upTo20: "1540", upTo50: "1600", plus51: "1630" },
+          { id: 6, models: 6, upTo10: "1550", upTo20: "1610", upTo50: "1670", plus51: "1700" },
+          { id: 7, models: 10, upTo10: "1800", upTo20: "1900", upTo50: "2000", plus51: "2100" },
+          { id: 8, models: 14, upTo10: "2200", upTo20: "2300", upTo50: "2400", plus51: "2500" }
+        ],
+        generalSettings: {
+          urgency: 100,
+          codeCost: 180,
+          discount: 10,
+          complexity: 30,
+          contractualPageCost: 1560
+        }
+      }
     },
     monthlyPlans: {},
     firms: []
   },
   certificates: {
     records: [],
-    generalSettings: {
-      urgency: 150,
-      replacementCost: 981,
-      reissuanceCost: 409,
-      duplicateCost: 490,
-      additionalPageCost: 245,
-      fullyProduced_upTo20PagesCost: 600,
-      fullyProduced_from21To200PagesCost: 950,
-      fullyProduced_plus201PagesCost: 1400,
-      fullyProduced_additionalPositionCost: 75,
-      sufficientProcessing_upTo20PagesCost: 700,
-      sufficientProcessing_from21To200PagesCost: 1050,
-      sufficientProcessing_plus201PagesCost: 1500,
-      sufficientProcessing_additionalPositionCost: 85
+    yearlySettings: {
+      [defaultYear]: {
+        generalSettings: {
+          urgency: 150,
+          replacementCost: 981,
+          reissuanceCost: 409,
+          duplicateCost: 490,
+          additionalPageCost: 245,
+          fullyProduced_upTo20PagesCost: 600,
+          fullyProduced_from21To200PagesCost: 950,
+          fullyProduced_plus201PagesCost: 1400,
+          fullyProduced_additionalPositionCost: 75,
+          sufficientProcessing_upTo20PagesCost: 700,
+          sufficientProcessing_from21To200PagesCost: 1050,
+          sufficientProcessing_plus201PagesCost: 1500,
+          sufficientProcessing_additionalPositionCost: 85
+        }
+      }
     },
     monthlyPlans: {},
     firms: []
@@ -77,17 +86,10 @@ const API_URL = '/api/data';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => {
-    const savedUser = sessionStorage.getItem('currentUser');
-    if (savedUser) {
-        try {
-            return JSON.parse(savedUser);
-        } catch (e) {
-            console.error('Failed to parse user from session storage', e);
-            return null;
-        }
-    }
-    return null;
+    const saved = sessionStorage.getItem('currentUser');
+    return saved ? JSON.parse(saved) : null;
   });
+  
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [activeMode, setActiveMode] = useState<AppMode>('conclusions');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -408,17 +410,16 @@ const App: React.FC = () => {
     }));
   };
 
-  const setCostModelTable = (newTable: CostModelRow[]) => {
+  const setYearlySettings = (year: string, settings: YearlySettings) => {
     setAppData(prevData => ({
       ...prevData,
-      [activeMode]: { ...prevData[activeMode], costModelTable: newTable },
-    }));
-  };
-  
-  const setGeneralSettings = (newSettings: GeneralSettings) => {
-    setAppData(prevData => ({
-      ...prevData,
-      [activeMode]: { ...prevData[activeMode], generalSettings: newSettings },
+      [activeMode]: {
+        ...prevData[activeMode],
+        yearlySettings: {
+          ...prevData[activeMode].yearlySettings,
+          [year]: settings
+        }
+      }
     }));
   };
   
@@ -497,7 +498,15 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch(currentView) {
       case 'settings':
-        return <Settings setCurrentView={setCurrentView} costModelTable={currentModeData.costModelTable} setCostModelTable={setCostModelTable} generalSettings={currentModeData.generalSettings} setGeneralSettings={setGeneralSettings} showToast={showToast} activeMode={activeMode} />;
+        return (
+          <Settings 
+            setCurrentView={setCurrentView} 
+            yearlySettings={currentModeData.yearlySettings}
+            setYearlySettings={setYearlySettings} 
+            showToast={showToast} 
+            activeMode={activeMode} 
+          />
+        );
       case 'firms':
         return <Firms setCurrentView={setCurrentView} firms={currentModeData.firms} onAddFirm={addFirm} onUpdateFirm={updateFirm} onDeleteFirm={deleteFirm} onCopyFirm={copyFirmToOtherMode} activeMode={activeMode} showToast={showToast} />;
       case 'plan':
@@ -508,7 +517,19 @@ const App: React.FC = () => {
       default:
         return (
           <>
-            <Statistics records={filteredRecords} costModelTable={currentModeData.costModelTable} generalSettings={currentModeData.generalSettings} experts={allExpertsForMode} selectedExpert={selectedExpert} setSelectedExpert={setSelectedExpert} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} monthlyPlan={currentMonthlyPlan} activeMode={activeMode} lastRecord={lastRecord} currentUser={currentUser} />
+            <Statistics 
+              records={filteredRecords} 
+              yearlySettings={currentModeData.yearlySettings} 
+              experts={allExpertsForMode} 
+              selectedExpert={selectedExpert} 
+              setSelectedExpert={setSelectedExpert} 
+              selectedMonth={selectedMonth} 
+              setSelectedMonth={setSelectedMonth} 
+              monthlyPlan={currentMonthlyPlan} 
+              activeMode={activeMode} 
+              lastRecord={lastRecord} 
+              currentUser={currentUser} 
+            />
             <div className="mt-8">
               <RecordsTable
                 records={filteredRecords}
@@ -519,8 +540,7 @@ const App: React.FC = () => {
                 onDeleteMultipleRecords={deleteMultipleRecords}
                 firms={currentModeData.firms}
                 experts={allExpertsForMode}
-                costModelTable={currentModeData.costModelTable}
-                generalSettings={currentModeData.generalSettings}
+                yearlySettings={currentModeData.yearlySettings}
                 showToast={showToast}
                 activeMode={activeMode}
                 selectedMonth={selectedMonth}
